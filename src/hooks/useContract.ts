@@ -8,7 +8,7 @@ import {
   fromBase64,
 } from '@injectivelabs/sdk-ts';
 import { MsgBroadcaster } from '@injectivelabs/wallet-ts';
-import { ENDPOINTS, CONTRACT_ADDRESS } from '@/lib/network';
+import { ENDPOINTS, CONTRACT_ADDRESS, NETWORK } from '@/lib/network';
 import type { League, LeaderboardEntry, Prediction } from '@/types';
 
 export function useContract(walletStrategy: unknown, address: string | null) {
@@ -20,7 +20,8 @@ export function useContract(walletStrategy: unknown, address: string | null) {
         CONTRACT_ADDRESS,
         toBase64(queryMsg),
       );
-      return JSON.parse(fromBase64(res.data as string)) as T;
+      const rawData = res.data as unknown as string;
+      return fromBase64(rawData) as unknown as T;
     },
     [wasmApi],
   );
@@ -29,8 +30,8 @@ export function useContract(walletStrategy: unknown, address: string | null) {
     async (msg: object, funds?: { denom: string; amount: string }[]) => {
       if (!address) throw new Error('Wallet not connected');
       const broadcaster = new MsgBroadcaster({
-        walletStrategy: walletStrategy as Parameters<typeof MsgBroadcaster>[0]['walletStrategy'],
-        network: ENDPOINTS,
+        walletStrategy: walletStrategy as ConstructorParameters<typeof MsgBroadcaster>[0]['walletStrategy'],
+        network: NETWORK,
       });
       const execMsg = MsgExecuteContractCompat.fromJSON({
         contractAddress: CONTRACT_ADDRESS,
