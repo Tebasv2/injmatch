@@ -316,13 +316,13 @@ fn compute_leaderboard(
         scores.insert(participant.clone(), (0, 0, 0));
     }
 
-    let results: Vec<((String, String), MatchResult)> = MATCH_RESULTS
+    let results: Vec<(String, MatchResult)> = MATCH_RESULTS
         .prefix(league_id)
         .range(deps.storage, None, None, Order::Ascending)
         .filter_map(|r| r.ok())
         .collect();
 
-    for ((_, match_id), result) in &results {
+    for (match_id, result) in &results {
         for participant in &league.participants {
             let pred_key = (league_id, participant.as_str(), match_id.as_str());
             if let Ok(Some(pred)) = PREDICTIONS.may_load(deps.storage, pred_key) {
@@ -382,14 +382,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetPredictions { league_id, predictor } => {
             let preds: Vec<Prediction> = if let Some(addr) = predictor {
                 PREDICTIONS
-                    .sub_prefix((league_id.as_str(), addr.as_str()))
+                    .prefix((league_id.as_str(), addr.as_str()))
                     .range(deps.storage, None, None, Order::Ascending)
                     .filter_map(|r| r.ok())
                     .map(|(_, p)| p)
                     .collect()
             } else {
                 PREDICTIONS
-                    .prefix(league_id.as_str())
+                    .sub_prefix(league_id.as_str())
                     .range(deps.storage, None, None, Order::Ascending)
                     .filter_map(|r| r.ok())
                     .map(|(_, p)| p)
@@ -401,7 +401,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let limit = limit.unwrap_or(30) as usize;
             let start = start_after
                 .as_deref()
-                .map(|s| cosmwasm_std::Bound::exclusive(s));
+                .map(cw_storage_plus::Bound::exclusive);
             let leagues: Vec<League> = LEAGUES
                 .range(deps.storage, start, None, Order::Ascending)
                 .take(limit)
