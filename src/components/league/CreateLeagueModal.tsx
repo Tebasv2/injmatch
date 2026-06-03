@@ -11,8 +11,8 @@ interface Props {
 }
 
 export function CreateLeagueModal({ onClose, onCreated }: Props) {
-  const { address, walletStrategy } = useWalletContext();
-  const contract = useContract(walletStrategy, address);
+  const { address } = useWalletContext();
+  const contract = useContract(address);
   const [name, setName] = useState('');
   const [entryFee, setEntryFee] = useState('1');
   const [maxParticipants, setMaxParticipants] = useState(10);

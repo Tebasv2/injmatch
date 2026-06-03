@@ -18,8 +18,8 @@ interface Props {
 }
 
 export function PredictionForm({ leagueId, match, onSubmitted }: Props) {
-  const { address, walletStrategy } = useWalletContext();
-  const contract = useContract(walletStrategy, address);
+  const { address } = useWalletContext();
+  const contract = useContract(address);
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
   const [loading, setLoading] = useState(false);

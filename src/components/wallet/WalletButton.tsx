@@ -1,6 +1,5 @@
 'use client';
 
-import { Wallet } from '@injectivelabs/wallet-ts';
 import { useWalletContext } from './WalletProvider';
 
 export function WalletButton() {
@@ -34,14 +33,14 @@ export function WalletButton() {
     <div className="flex flex-col items-end gap-1">
       <div className="flex gap-2">
         <button
-          onClick={() => connect(Wallet.Keplr)}
+          onClick={() => connect('keplr')}
           disabled={isConnecting}
           className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition-colors"
         >
           {isConnecting ? 'Connecting…' : 'Keplr'}
         </button>
         <button
-          onClick={() => connect(Wallet.Metamask)}
+          onClick={() => connect('metamask')}
           disabled={isConnecting}
           className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition-colors"
         >
