@@ -2,110 +2,103 @@
 
 import { useState } from 'react';
 import { CreateLeagueModal } from '@/components/league/CreateLeagueModal';
-import { LeagueCard } from '@/components/league/LeagueCard';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
-import { League } from '@/types';
-
-// Mock data until contract is deployed
-const MOCK_LEAGUES: League[] = [
-  {
-    id: '1',
-    name: 'Champions Circle',
-    admin: 'inj1abcdefghijklmnopqrstuvwxyz',
-    entry_fee: '1000000000000000000',
-    prize_pool: '5000000000000000000',
-    max_participants: 20,
-    participants: [],
-    status: 'open',
-    created_at: Date.now(),
-  },
-  {
-    id: '2',
-    name: 'World Cup Legends',
-    admin: 'inj1defghijklmnopqrstuvwxyzabc',
-    entry_fee: '5000000000000000000',
-    prize_pool: '25000000000000000000',
-    max_participants: 10,
-    participants: [],
-    status: 'active',
-    created_at: Date.now(),
-  },
-];
 
 export default function HomePage() {
-  const { address, isConnected } = useWalletContext();
+  const { isConnected } = useWalletContext();
   const [showCreate, setShowCreate] = useState(false);
-  const [leagues] = useState<League[]>(MOCK_LEAGUES);
-
-  const handleJoin = (league: League) => {
-    if (!isConnected) {
-      alert('Please connect your wallet first');
-      return;
-    }
-    console.log('Joining league:', league.id);
-  };
-
-  const handleView = (league: League) => {
-    console.log('Viewing league:', league.id);
-  };
 
   return (
-    <div>
+    <div className="min-h-screen bg-black text-white">
       {/* Hero */}
-      <div className="text-center py-12 mb-10">
-        <h1 className="text-4xl sm:text-5xl font-extrabold mb-3 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-          World Cup Prediction League
-        </h1>
-        <p className="text-gray-400 text-lg max-w-xl mx-auto">
-          Predict match scores, compete with friends, and win INJ — all on-chain on Injective testnet.
-        </p>
-        <div className="flex justify-center gap-4 mt-6">
-          {isConnected ? (
-            <button
-              onClick={() => setShowCreate(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
-            >
-              + Create League
-            </button>
-          ) : (
-            <p className="text-gray-500 text-sm">Connect your wallet to create or join leagues</p>
+      <section
+        className="relative min-h-[90vh] flex flex-col justify-center px-6 md:px-16 overflow-hidden"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.3) 100%), url('/hero-bg.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+        }}
+      >
+        {/* Decorative pitch circle */}
+        <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none opacity-20">
+          <div className="absolute right-[15%] top-1/2 -translate-y-1/2 w-64 h-64 rounded-full border-2 border-white" />
+          <div className="absolute right-[15%] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white" />
+        </div>
+
+        <div className="relative z-10 max-w-2xl">
+          <h1 className="text-5xl md:text-7xl font-black leading-tight uppercase mb-6">
+            PREDICT THE
+            <br />
+            <span className="text-green-400">WORLD CUP</span>
+            <br />
+            BETTER THAN
+            <br />
+            <span className="text-green-400">EVERYONE?</span>
+            <br />
+            TIME TO EARN FROM IT
+          </h1>
+
+          <p className="text-gray-300 text-base md:text-lg mb-2">Study the fixtures and form.</p>
+          <p className="text-gray-300 text-base md:text-lg mb-2">Submit your score predictions before each match.</p>
+          <p className="text-gray-300 text-base md:text-lg mb-8">
+            The sharper your picks, the more INJ lands in your wallet.
+          </p>
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-3 gap-3 mb-10 max-w-lg">
+            {[
+              { label: 'PRIZE POOL', sub: 'ACTIVE LEAGUES' },
+              { label: 'PLAYERS', sub: 'REGISTERED' },
+              { label: 'UNTIL DEADLINE', sub: '', value: 'Open now' },
+            ].map((card) => (
+              <div key={card.label} className="border border-gray-700 rounded-lg px-4 py-3 bg-black/40 backdrop-blur">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest leading-tight">{card.label}</p>
+                <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-2">{card.sub}</p>
+                {'value' in card
+                  ? <p className="text-sm font-bold text-white">{card.value}</p>
+                  : <div className="w-6 h-0.5 bg-gray-600 mt-1" />}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={() => isConnected && setShowCreate(true)}
+            className="inline-flex items-center gap-3 border-2 border-white hover:border-green-400 hover:text-green-400 text-white font-black uppercase tracking-widest px-8 py-4 rounded-full transition-colors text-sm"
+          >
+            START COMPETING <span className="text-lg">→</span>
+          </button>
+          {!isConnected && (
+            <p className="text-gray-500 text-xs mt-3">Connect your wallet to get started</p>
           )}
         </div>
-      </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[
-          { label: 'Active Leagues', value: '2' },
-          { label: 'Total Prize Pool', value: '30 INJ' },
-          { label: 'Predictions Made', value: '0' },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{stat.value}</p>
-            <p className="text-xs text-gray-500 mt-1">{stat.label}</p>
-          </div>
-        ))}
-      </div>
+        <div className="absolute bottom-6 left-16 text-xs text-gray-500 uppercase tracking-widest">
+          How it works ↓
+        </div>
+      </section>
 
-      {/* League grid */}
-      <h2 className="text-xl font-semibold text-white mb-4">Available Leagues</h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {leagues.map((league) => (
-          <LeagueCard
-            key={league.id}
-            league={league}
-            onJoin={handleJoin}
-            onView={handleView}
-            userAddress={address}
-          />
-        ))}
-      </div>
+      {/* How it works */}
+      <section className="bg-gray-950 border-t border-gray-800 py-16 px-6 md:px-16">
+        <h2 className="text-2xl font-black uppercase tracking-wide mb-10">How it works</h2>
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
+          {[
+            { n: '01', title: 'Join a League', desc: 'Pay the entry fee in INJ and get access to all fixtures.' },
+            { n: '02', title: 'Submit Predictions', desc: 'Predict the exact score of each World Cup match before kick-off.' },
+            { n: '03', title: 'Win INJ', desc: 'Exact scores = 3 pts. Correct outcome = 1 pt. Top 3 split the prize pool.' },
+          ].map((step) => (
+            <div key={step.n} className="border border-gray-800 rounded-xl p-6">
+              <p className="text-4xl font-black text-green-400 mb-3">{step.n}</p>
+              <h3 className="text-lg font-bold text-white mb-2">{step.title}</h3>
+              <p className="text-gray-400 text-sm">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {showCreate && (
-        <CreateLeagueModal
-          onClose={() => setShowCreate(false)}
-          onCreated={() => console.log('League created!')}
-        />
+        <CreateLeagueModal onClose={() => setShowCreate(false)} onCreated={() => setShowCreate(false)} />
       )}
     </div>
   );
