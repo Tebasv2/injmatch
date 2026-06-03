@@ -1,12 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  turbopack: {},
   serverExternalPackages: [
     '@injectivelabs/wallet-ts',
     '@injectivelabs/sdk-ts',
     '@injectivelabs/networks',
-    '@injectivelabs/wallet-strategy',
     '@ledgerhq/errors',
     '@ledgerhq/devices',
     '@ledgerhq/hw-transport',
@@ -15,6 +13,18 @@ const nextConfig: NextConfig = {
     '@magic-sdk/types',
     '@magic-ext/oauth2',
   ],
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
