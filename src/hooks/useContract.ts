@@ -2,14 +2,30 @@
 
 import { useCallback, useMemo } from 'react';
 import {
-  MsgExecuteContractCompat,
   ChainGrpcWasmApi,
   toBase64,
   fromBase64,
 } from '@injectivelabs/sdk-ts';
-import { ENDPOINTS, CONTRACT_ADDRESS, NETWORK } from '@/lib/network';
-import { getStrategy } from './useWallet';
+import { ENDPOINTS, CONTRACT_ADDRESS, CHAIN_ID } from '@/lib/network';
 import type { League, LeaderboardEntry, Prediction } from '@/types';
+
+async function broadcastTx(address: string, msg: any) {
+  const keplr = (window as any).keplr;
+  if (!keplr) throw new Error('Keplr not connected');
+
+  const { MsgExecuteContractCompat, toBase64 } = await import('@injectivelabs/sdk-ts');
+  const { SigningCosmWasmClient } = await import('@cosmjs/cosmwasm-stargate');
+  const { GasPrice } = await import('@cosmjs/stargate');
+
+  const offlineSigner = keplr.getOfflineSignerOnlyAmino(CHAIN_ID);
+  const client = await SigningCosmWasmClient.connectWithSigner(
+    ENDPOINTS.rpc,
+    offlineSigner,
+    { gasPrice: GasPrice.fromString('500000000inj') },
+  );
+
+  return client.execute(address, CONTRACT_ADDRESS, msg.msg, 'auto', undefined, msg.funds ?? []);
+}
 
 export function useContract(address: string | null) {
   const wasmApi = useMemo(() => new ChainGrpcWasmApi(ENDPOINTS.grpc), []);
@@ -25,16 +41,7 @@ export function useContract(address: string | null) {
   const execute = useCallback(
     async (msg: object, funds?: { denom: string; amount: string }[]) => {
       if (!address) throw new Error('Wallet not connected');
-      const { MsgBroadcaster } = await import('@injectivelabs/wallet-ts');
-      const strategy = await getStrategy();
-      const broadcaster = new MsgBroadcaster({ walletStrategy: strategy, network: NETWORK });
-      const execMsg = MsgExecuteContractCompat.fromJSON({
-        contractAddress: CONTRACT_ADDRESS,
-        sender: address,
-        msg,
-        funds: funds ?? [],
-      });
-      return broadcaster.broadcast({ msgs: [execMsg], injectiveAddress: address });
+      return broadcastTx(address, { msg, funds });
     },
     [address],
   );

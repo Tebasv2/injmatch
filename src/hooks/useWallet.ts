@@ -2,17 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { ChainGrpcBankApi } from '@injectivelabs/sdk-ts';
-import { CHAIN_ID, ENDPOINTS } from '@/lib/network';
+import { ENDPOINTS, CHAIN_ID } from '@/lib/network';
 import type { WalletState } from '@/types';
-
-// Lazily instantiated so wallet-ts is never statically bundled
-let _strategy: any = null;
-export async function getStrategy() {
-  if (_strategy) return _strategy;
-  const { WalletStrategy } = await import('@injectivelabs/wallet-ts');
-  _strategy = new WalletStrategy({ chainId: CHAIN_ID });
-  return _strategy;
-}
 
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
@@ -39,13 +30,26 @@ export function useWallet() {
     async (walletType: 'keplr' | 'metamask' = 'keplr') => {
       setState((prev) => ({ ...prev, isConnecting: true, error: null }));
       try {
-        const { Wallet } = await import('@injectivelabs/wallet-ts');
-        const strategy = await getStrategy();
-        strategy.setWallet(walletType === 'metamask' ? Wallet.Metamask : Wallet.Keplr);
-        const addresses = await strategy.getAddresses();
-        const address = addresses[0];
-        setState((prev) => ({ ...prev, address, isConnected: true, isConnecting: false }));
-        await fetchBalance(address);
+        if (walletType === 'keplr') {
+          const keplr = (window as any).keplr;
+          if (!keplr) throw new Error('Keplr extension not found. Please install it.');
+          await keplr.enable(CHAIN_ID);
+          const offlineSigner = keplr.getOfflineSigner(CHAIN_ID);
+          const accounts = await offlineSigner.getAccounts();
+          const address = accounts[0].address;
+          setState((prev) => ({ ...prev, address, isConnected: true, isConnecting: false }));
+          await fetchBalance(address);
+        } else {
+          // MetaMask / EVM wallet — use ethereum provider
+          const ethereum = (window as any).ethereum;
+          if (!ethereum) throw new Error('MetaMask not found. Please install it.');
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          // Convert EVM address to Injective bech32 using sdk-ts
+          const { getInjectiveAddress } = await import('@injectivelabs/sdk-ts');
+          const address = getInjectiveAddress(accounts[0]);
+          setState((prev) => ({ ...prev, address, isConnected: true, isConnecting: false }));
+          await fetchBalance(address);
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to connect wallet';
         setState((prev) => ({ ...prev, isConnecting: false, error: msg }));
@@ -54,10 +58,7 @@ export function useWallet() {
     [fetchBalance],
   );
 
-  const disconnect = useCallback(async () => {
-    const strategy = await getStrategy();
-    strategy.disconnect();
-    _strategy = null;
+  const disconnect = useCallback(() => {
     setState({ address: null, isConnected: false, isConnecting: false, balance: null, error: null });
   }, []);
 
