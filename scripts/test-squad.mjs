@@ -1,25 +1,30 @@
 /**
  * Test squad save + load on Injective testnet
  *
- * Usage:
- *   CONTRACT=inj1... MNEMONIC="word1 word2 ..." node scripts/test-squad.mjs
+ * Usage (private keys):
+ *   CONTRACT=inj1... PRIVATE_KEY=hexkey1 PRIVATE_KEY2=hexkey2 node scripts/test-squad.mjs
+ *
+ * Usage (mnemonics):
+ *   CONTRACT=inj1... MNEMONIC="word1 word2 ..." MNEMONIC2="word1 word2 ..." node scripts/test-squad.mjs
  *
  * Tests:
  *   1. Save a squad from wallet A
  *   2. Query it back — verify round-trip
- *   3. Save a DIFFERENT squad from wallet B (second mnemonic via MNEMONIC2)
+ *   3. Save a DIFFERENT squad from wallet B
  *   4. Query both — verify they are stored independently
  */
 
-import { readFileSync } from 'fs';
-
 async function main() {
   const contractAddress = process.env.CONTRACT;
-  const mnemonic1 = process.env.MNEMONIC;
-  const mnemonic2 = process.env.MNEMONIC2;
+  const privKey1   = process.env.PRIVATE_KEY;
+  const privKey2   = process.env.PRIVATE_KEY2;
+  const mnemonic1  = process.env.MNEMONIC;
+  const mnemonic2  = process.env.MNEMONIC2;
 
-  if (!contractAddress || !mnemonic1 || !mnemonic2) {
-    console.error('Usage: CONTRACT=inj1... MNEMONIC="..." MNEMONIC2="..." node scripts/test-squad.mjs');
+  if (!contractAddress || (!privKey1 && !mnemonic1) || (!privKey2 && !mnemonic2)) {
+    console.error('Usage:');
+    console.error('  CONTRACT=inj1... PRIVATE_KEY=hex1 PRIVATE_KEY2=hex2 node scripts/test-squad.mjs');
+    console.error('  CONTRACT=inj1... MNEMONIC="..." MNEMONIC2="..." node scripts/test-squad.mjs');
     process.exit(1);
   }
 
@@ -43,8 +48,15 @@ async function main() {
   const wasmApi   = new ChainGrpcWasmApi(ENDPOINTS.grpc);
   const authApi   = new ChainRestAuthApi(ENDPOINTS.rest);
 
-  async function saveSquad(mnemonic, squad) {
-    const pk      = PrivateKey.fromMnemonic(mnemonic);
+  // Accept either a hex private key or a mnemonic string
+  function loadPrivateKey(keyOrMnemonic) {
+    return keyOrMnemonic.split(' ').length > 1
+      ? PrivateKey.fromMnemonic(keyOrMnemonic)
+      : PrivateKey.fromHex(keyOrMnemonic);
+  }
+
+  async function saveSquad(keyOrMnemonic, squad) {
+    const pk      = loadPrivateKey(keyOrMnemonic);
     const pubKey  = pk.toPublicKey();
     const address = getInjectiveAddress(pubKey.toAddress().address);
 
@@ -108,9 +120,9 @@ async function main() {
     bench_ids: ['oblak','cancelo','rashford'],
   };
 
-  // Save both
-  const addrA = await saveSquad(mnemonic1, squadA);
-  const addrB = await saveSquad(mnemonic2, squadB);
+  // Save both — use private key if provided, fall back to mnemonic
+  const addrA = await saveSquad(privKey1 || mnemonic1, squadA);
+  const addrB = await saveSquad(privKey2 || mnemonic2, squadB);
 
   // Allow 1 block
   console.log('\n⏳  Waiting 3s for block...');

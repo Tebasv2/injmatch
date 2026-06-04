@@ -1,8 +1,11 @@
 /**
  * Deploy injmatch contract to Injective testnet (injective-888)
  *
- * Usage:
- *   MNEMONIC="your twelve word mnemonic phrase here" node scripts/deploy.mjs
+ * Usage (private key — from Keplr):
+ *   PRIVATE_KEY=your_hex_private_key node scripts/deploy.mjs
+ *
+ * Usage (mnemonic — 12/24 word seed phrase):
+ *   MNEMONIC="word1 word2 ..." node scripts/deploy.mjs
  *
  * What it does:
  *   1. Reads contracts/artifacts/injmatch.wasm
@@ -12,7 +15,6 @@
  *
  * Requirements:
  *   - Wallet must have testnet INJ for gas (get from https://testnet.faucet.injective.network/)
- *   - MNEMONIC env var with the wallet seed phrase
  */
 
 import { readFileSync } from 'fs';
@@ -22,9 +24,13 @@ import { fileURLToPath } from 'url';
 const __dir = dirname(fileURLToPath(import.meta.url));
 
 async function main() {
-  const mnemonic = process.env.MNEMONIC;
-  if (!mnemonic) {
-    console.error('❌  Set MNEMONIC env var — your testnet wallet seed phrase');
+  const privateKeyHex = process.env.PRIVATE_KEY;
+  const mnemonic      = process.env.MNEMONIC;
+
+  if (!privateKeyHex && !mnemonic) {
+    console.error('❌  Provide your wallet credentials:');
+    console.error('   PRIVATE_KEY=your_hex_key node scripts/deploy.mjs');
+    console.error('   — or —');
     console.error('   MNEMONIC="word1 word2 ..." node scripts/deploy.mjs');
     process.exit(1);
   }
@@ -47,8 +53,10 @@ async function main() {
   const ENDPOINTS = getNetworkEndpoints(NETWORK);
   const CHAIN_ID  = 'injective-888';
 
-  // Derive wallet
-  const privateKey = PrivateKey.fromMnemonic(mnemonic);
+  // Derive wallet — private key takes priority over mnemonic
+  const privateKey = privateKeyHex
+    ? PrivateKey.fromHex(privateKeyHex)
+    : PrivateKey.fromMnemonic(mnemonic);
   const publicKey  = privateKey.toPublicKey();
   const injectiveAddress = getInjectiveAddress(publicKey.toAddress().address);
 
