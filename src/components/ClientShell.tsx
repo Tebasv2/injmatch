@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 const WalletProvider = dynamic(
   () => import('@/components/wallet/WalletProvider').then((m) => m.WalletProvider),
@@ -13,54 +14,101 @@ const WalletButton = dynamic(
   { ssr: false },
 );
 
-const NAV = ['Leagues', 'Leaderboard', 'Fixtures', 'FAQ'];
+const NAV = [
+  { label: 'World Cup', active: true },
+  { label: 'Leagues', active: false },
+  { label: 'Fixtures', active: false },
+  { label: 'Leaderboard', active: false },
+  { label: 'FAQ', active: false },
+  { label: 'Talents', active: false, soon: true },
+];
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
+  const [lang, setLang] = useState<'EN' | 'UA'>('EN');
+
   return (
     <WalletProvider>
-      <motion.header
-        initial={{ y: -60, opacity: 0 }}
+      {/* Outer wrapper — full width with padding so the container floats */}
+      <motion.div
+        initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800"
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        className="sticky top-0 z-50 w-full px-4 py-3 bg-transparent"
       >
-        <div className="mx-auto px-6 md:px-12 py-4 flex justify-between items-center">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-black tracking-tight">
-              <span className="text-green-400">⚽</span>
-              <span className="text-white ml-1">INJ</span>
+        {/* Inner container — rounded pill with dark bg + border */}
+        <header className="w-full rounded-2xl border border-gray-700/60 bg-[rgba(10,10,10,0.92)] backdrop-blur-xl px-5 py-3 flex items-center justify-between gap-4">
+
+          {/* ── Logo ── */}
+          <a href="/" className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+              <span className="text-black font-black text-sm">⚽</span>
+            </div>
+            <span className="text-lg font-black tracking-tight leading-none">
+              <span className="text-white">INJ</span>
               <span className="text-green-400">MATCH</span>
             </span>
-          </div>
+          </a>
 
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-8">
+          {/* ── Nav links ── */}
+          <nav className="hidden lg:flex items-center gap-1">
             {NAV.map((item) => (
               <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors"
+                key={item.label}
+                href="#"
+                className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
+                  item.active
+                    ? 'text-green-400'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
-                {item}
+                {item.label}
+                {item.soon && (
+                  <span className="absolute -top-2 -right-1 bg-green-500 text-black text-[8px] font-black uppercase px-1 py-0.5 rounded leading-none">
+                    Soon
+                  </span>
+                )}
               </a>
             ))}
           </nav>
 
-          {/* Right side */}
-          <div className="flex items-center gap-4">
+          {/* ── Right side controls ── */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+
+            {/* Language toggle */}
+            <div className="hidden sm:flex items-center rounded-lg overflow-hidden border border-gray-700">
+              {(['EN', 'UA'] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                    lang === l
+                      ? 'bg-green-500 text-black'
+                      : 'text-gray-400 hover:text-white bg-transparent'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {/* Twitter / X link */}
             <a
-              href="https://testnet.hub.injective.network/"
+              href="https://x.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:block text-xs text-gray-500 hover:text-white uppercase tracking-widest transition-colors"
+              className="hidden md:flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
             >
-              Testnet
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.727-8.84L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              <span className="hidden lg:inline">@INJMATCH</span>
             </a>
+
+            {/* Connect Wallet */}
             <WalletButton />
           </div>
-        </div>
-      </motion.header>
+        </header>
+      </motion.div>
 
       <main>{children}</main>
     </WalletProvider>

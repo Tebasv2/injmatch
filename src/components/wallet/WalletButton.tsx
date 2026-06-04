@@ -10,48 +10,52 @@ export function WalletButton() {
   if (isConnected && address) {
     return (
       <div className="flex items-center gap-2">
-        <div className="hidden sm:block text-right">
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Balance</p>
-          <p className="text-xs font-bold text-green-400">{balance} INJ</p>
+        {/* Balance chip */}
+        <div className="hidden sm:flex flex-col text-right">
+          <span className="text-[9px] text-gray-500 uppercase tracking-widest">Balance</span>
+          <span className="text-xs font-bold text-green-400">{balance} INJ</span>
         </div>
-        <div className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5">
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Address</p>
-          <p className="text-xs font-mono text-white">
-            {address.slice(0, 8)}…{address.slice(-5)}
+
+        {/* Address chip */}
+        <div className="border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-900">
+          <p className="text-[9px] text-gray-500 uppercase tracking-widest">Address</p>
+          <p className="text-xs font-mono text-white leading-tight">
+            {address.slice(0, 7)}…{address.slice(-5)}
           </p>
         </div>
+
+        {/* Disconnect */}
         <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
           onClick={disconnect}
-          className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-red-400 transition-colors px-2"
+          className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-red-400 transition-colors"
         >
-          Disconnect
+          ✕
         </motion.button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex gap-2">
-        <motion.button
-          whileHover={{ scale: 1.03, backgroundColor: '#16a34a' }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => connect('keplr')}
-          disabled={isConnecting}
-          className="bg-green-500 disabled:opacity-50 text-black text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-lg transition-colors"
-        >
-          {isConnecting ? 'Connecting…' : 'Connect Wallet'}
-        </motion.button>
-      </div>
+    <div className="flex flex-col items-end">
+      <motion.button
+        whileHover={{ scale: 1.04, backgroundColor: '#16a34a' }}
+        whileTap={{ scale: 0.96 }}
+        onClick={() => connect('keplr')}
+        disabled={isConnecting}
+        className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-black font-black uppercase tracking-widest text-xs px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+      >
+        {isConnecting ? 'Connecting…' : 'Connect Wallet'}
+      </motion.button>
+
       <AnimatePresence>
         {error && (
           <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="text-red-400 text-[10px]"
+            className="text-red-400 text-[9px] mt-1 uppercase tracking-widest"
           >
             {error}
           </motion.p>
