@@ -55,7 +55,6 @@ export default function HomePage() {
 
         {/* hero-bg.jpg with parallax + left-side dark gradient */}
         <motion.div
-          style={{ y: trophyY }}
           className="absolute inset-0 pointer-events-none select-none"
           style={{
             backgroundImage:

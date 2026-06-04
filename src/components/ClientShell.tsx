@@ -15,12 +15,10 @@ const WalletButton = dynamic(
 );
 
 const NAV = [
-  { label: 'World Cup', active: true },
-
-  { label: 'Fixtures', active: false },
-  { label: 'Leaderboard', active: false },
-  { label: 'FAQ', active: false },
-  
+  { label: 'World Cup', active: true, soon: false },
+  { label: 'Fixtures', active: false, soon: false },
+  { label: 'Leaderboard', active: false, soon: true },
+  { label: 'FAQ', active: false, soon: false },
 ];
 
 export function ClientShell({ children }: { children: React.ReactNode }) {

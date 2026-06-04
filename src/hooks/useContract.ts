@@ -15,13 +15,11 @@ async function broadcastTx(address: string, msg: any) {
 
   const { MsgExecuteContractCompat, toBase64 } = await import('@injectivelabs/sdk-ts');
   const { SigningCosmWasmClient } = await import('@cosmjs/cosmwasm-stargate');
-  const { GasPrice } = await import('@cosmjs/stargate');
-
   const offlineSigner = keplr.getOfflineSignerOnlyAmino(CHAIN_ID);
   const client = await SigningCosmWasmClient.connectWithSigner(
-    ENDPOINTS.rpc,
+    ENDPOINTS.rpc as string,
     offlineSigner,
-    { gasPrice: GasPrice.fromString('500000000inj') },
+    { gasPrice: '500000000inj' as any },
   );
 
   return client.execute(address, CONTRACT_ADDRESS, msg.msg, 'auto', undefined, msg.funds ?? []);

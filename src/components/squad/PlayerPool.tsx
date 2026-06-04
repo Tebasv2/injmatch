@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PoolRow } from './PlayerCard';
 import { PLAYERS } from '@/lib/players';
@@ -22,7 +22,7 @@ export function PlayerPool({ selectedIds, positionHint, onSelect, formation }: P
   const [filter, setFilter] = useState<PositionFilter>(positionHint ?? 'ALL');
 
   // When positionHint changes (user clicked a slot), auto-switch filter
-  useMemo(() => {
+  useEffect(() => {
     if (positionHint) setFilter(positionHint);
   }, [positionHint]);
 
