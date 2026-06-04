@@ -4,17 +4,11 @@
  * Usage (private key — from Keplr):
  *   PRIVATE_KEY=your_hex_private_key node scripts/deploy.mjs
  *
- * Usage (mnemonic — 12/24 word seed phrase):
+ * Usage (mnemonic):
  *   MNEMONIC="word1 word2 ..." node scripts/deploy.mjs
  *
- * What it does:
- *   1. Reads contracts/artifacts/injmatch.wasm
- *   2. Broadcasts MsgStoreCode  → gets code_id
- *   3. Broadcasts MsgInstantiateContract → gets contract_address
- *   4. Prints the address — paste it into NEXT_PUBLIC_CONTRACT_ADDRESS in .env.local
- *
- * Requirements:
- *   - Wallet must have testnet INJ for gas (get from https://testnet.faucet.injective.network/)
+ * Prints the contract address — paste into NEXT_PUBLIC_CONTRACT_ADDRESS in .env.local
+ * Get testnet INJ at: https://testnet.faucet.injective.network/
  */
 
 import { readFileSync } from 'fs';
@@ -22,161 +16,81 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
+const RPC    = 'https://testnet.sentry.tm.injective.network:443';
+const PREFIX = 'inj';
 
 async function main() {
   const privateKeyHex = process.env.PRIVATE_KEY;
   const mnemonic      = process.env.MNEMONIC;
 
   if (!privateKeyHex && !mnemonic) {
-    console.error('❌  Provide your wallet credentials:');
+    console.error('❌  Provide credentials:');
     console.error('   PRIVATE_KEY=your_hex_key node scripts/deploy.mjs');
-    console.error('   — or —');
     console.error('   MNEMONIC="word1 word2 ..." node scripts/deploy.mjs');
     process.exit(1);
   }
 
-  // Dynamic imports — these packages are already in node_modules
-  const {
-    PrivateKey,
-    ChainRestAuthApi,
-    ChainRestTendermintApi,
-    MsgStoreCode,
-    MsgInstantiateContract,
-    createTransactionFromMsg,
-    TxRestClient,
-    getInjectiveAddress,
-  } = await import('@injectivelabs/sdk-ts');
+  const { SigningCosmWasmClient } = await import('@cosmjs/cosmwasm-stargate');
+  const { DirectSecp256k1Wallet, DirectSecp256k1HdWallet } = await import('@cosmjs/proto-signing');
+  const { GasPrice } = await import('@cosmjs/stargate');
 
-  const { Network, getNetworkEndpoints } = await import('@injectivelabs/networks');
+  // Build signer
+  let signer;
+  if (privateKeyHex) {
+    const keyHex = privateKeyHex.startsWith('0x') ? privateKeyHex.slice(2) : privateKeyHex;
+    const keyBytes = Uint8Array.from(Buffer.from(keyHex, 'hex'));
+    signer = await DirectSecp256k1Wallet.fromKey(keyBytes, PREFIX);
+  } else {
+    signer = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, { prefix: PREFIX });
+  }
 
-  const NETWORK   = Network.TestnetK8s;
-  const ENDPOINTS = getNetworkEndpoints(NETWORK);
-  const CHAIN_ID  = 'injective-888';
+  const [account] = await signer.getAccounts();
+  console.log(`\n🔑  Deploying from: ${account.address}`);
+  console.log(`🌐  Network: injective-888 (testnet)\n`);
 
-  // Derive wallet — private key takes priority over mnemonic
-  const privateKey = privateKeyHex
-    ? PrivateKey.fromHex(privateKeyHex)
-    : PrivateKey.fromMnemonic(mnemonic);
-  const publicKey  = privateKey.toPublicKey();
-  const injectiveAddress = getInjectiveAddress(publicKey.toAddress().address);
+  const client = await SigningCosmWasmClient.connectWithSigner(
+    RPC,
+    signer,
+    { gasPrice: GasPrice.fromString('500000000inj') },
+  );
 
-  console.log(`\n🔑  Deploying from: ${injectiveAddress}`);
-  console.log(`🌐  Network:        ${CHAIN_ID} (testnet)\n`);
+  const balance = await client.getBalance(account.address, 'inj');
+  const injBalance = (Number(balance.amount) / 1e18).toFixed(4);
+  console.log(`💰  Balance: ${injBalance} INJ\n`);
 
-  // Load wasm
+  if (Number(balance.amount) === 0) {
+    console.error('❌  No testnet INJ. Get some at: https://testnet.faucet.injective.network/');
+    process.exit(1);
+  }
+
+  // ── Step 1: Upload WASM ────────────────────────────────────────────────────
   const wasmPath = join(__dir, '../contracts/artifacts/injmatch.wasm');
   const wasm = readFileSync(wasmPath);
-  const wasmBytes = new Uint8Array(wasm);
 
-  // Fetch account info
-  const authApi      = new ChainRestAuthApi(ENDPOINTS.rest);
-  const tendermintApi = new ChainRestTendermintApi(ENDPOINTS.rest);
+  console.log('📦  Uploading WASM...');
+  const uploadResult = await client.upload(account.address, wasm, 'auto');
+  console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
+  console.log(`   TX: ${uploadResult.transactionHash}\n`);
 
-  const accountDetails = await authApi.fetchAccount(injectiveAddress);
-  const chainStatus    = await tendermintApi.fetchNodeInfo();
-  const sequence       = parseInt(accountDetails.baseAccount.sequence, 10);
-  const accountNumber  = parseInt(accountDetails.baseAccount.accountNumber, 10);
-
-  console.log(`📋  Account #${accountNumber}  Sequence: ${sequence}`);
-
-  const txClient = new TxRestClient(ENDPOINTS.rest);
-
-  // ── Step 1: Store code ──────────────────────────────────────────────────────
-
-  console.log('📦  Storing WASM code...');
-
-  const storeMsg = MsgStoreCode.fromJSON({
-    sender: injectiveAddress,
-    wasmBytes,
-  });
-
-  const { signBytes: storeSignBytes, txRaw: storeTxRaw, transaction: storeTx } =
-    createTransactionFromMsg({
-      sequence,
-      accountNumber,
-      message: storeMsg,
-      chainId: CHAIN_ID,
-      fee: { amount: [{ denom: 'inj', amount: '5000000000000000' }], gas: '3000000' },
-      pubKey: publicKey.toBase64(),
-    });
-
-  const storeSig = await privateKey.sign(Buffer.from(storeSignBytes));
-  storeTxRaw.signatures = [storeSig];
-
-  const storeResult = await txClient.broadcast(storeTxRaw);
-
-  if (storeResult.code !== 0) {
-    console.error('❌  StoreCode failed:', storeResult.rawLog);
-    process.exit(1);
-  }
-
-  // Extract code_id from logs
-  const codeIdAttr = storeResult.events
-    ?.flatMap(e => e.attributes)
-    ?.find(a => a.key === 'code_id');
-  const codeId = codeIdAttr?.value;
-
-  if (!codeId) {
-    console.error('❌  Could not find code_id in tx result');
-    console.error(JSON.stringify(storeResult, null, 2));
-    process.exit(1);
-  }
-
-  console.log(`✅  Code stored! code_id = ${codeId}`);
-  console.log(`   TX: ${storeResult.txHash}\n`);
-
-  // ── Step 2: Instantiate ─────────────────────────────────────────────────────
-
+  // ── Step 2: Instantiate ────────────────────────────────────────────────────
   console.log('🚀  Instantiating contract...');
+  const instantiateResult = await client.instantiate(
+    account.address,
+    uploadResult.codeId,
+    {},           // InstantiateMsg is empty
+    'InjMatch v1',
+    'auto',
+    { admin: account.address },
+  );
 
-  const instantiateMsg = MsgInstantiateContract.fromJSON({
-    sender: injectiveAddress,
-    admin: injectiveAddress,
-    codeId: parseInt(codeId, 10),
-    label: 'InjMatch v1',
-    msg: {},   // InstantiateMsg is empty {}
-    amount: { denom: 'inj', amount: '0' },
-  });
-
-  const { signBytes: instSignBytes, txRaw: instTxRaw } =
-    createTransactionFromMsg({
-      sequence: sequence + 1,
-      accountNumber,
-      message: instantiateMsg,
-      chainId: CHAIN_ID,
-      fee: { amount: [{ denom: 'inj', amount: '2000000000000000' }], gas: '1000000' },
-      pubKey: publicKey.toBase64(),
-    });
-
-  const instSig = await privateKey.sign(Buffer.from(instSignBytes));
-  instTxRaw.signatures = [instSig];
-
-  const instResult = await txClient.broadcast(instTxRaw);
-
-  if (instResult.code !== 0) {
-    console.error('❌  Instantiate failed:', instResult.rawLog);
-    process.exit(1);
-  }
-
-  // Extract contract address from logs
-  const contractAttr = instResult.events
-    ?.flatMap(e => e.attributes)
-    ?.find(a => a.key === '_contract_address' || a.key === 'contract_address');
-  const contractAddress = contractAttr?.value;
-
-  if (!contractAddress) {
-    console.error('❌  Could not find contract address in tx result');
-    console.error(JSON.stringify(instResult, null, 2));
-    process.exit(1);
-  }
-
+  const contractAddress = instantiateResult.contractAddress;
   console.log(`✅  Contract deployed!\n`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`CONTRACT ADDRESS: ${contractAddress}`);
+  console.log(`CONTRACT ADDRESS:\n${contractAddress}`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`\nAdd to .env.local:`);
+  console.log(`\nAdd to .env.local (and Vercel env vars):`);
   console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}`);
-  console.log(`\nTX: ${instResult.txHash}`);
+  console.log(`\nTX: ${instantiateResult.transactionHash}`);
 }
 
 main().catch(err => {
