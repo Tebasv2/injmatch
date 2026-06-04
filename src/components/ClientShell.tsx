@@ -21,7 +21,7 @@ const NAV = [
   { label: 'Fixtures',    href: '/fixtures',    soon: false },
   { label: 'Squad',       href: '/squad',       soon: false },
   { label: 'Scores',      href: '/scores',      soon: false },
-  { label: 'Leaderboard', href: '/leaderboard', soon: true  },
+  { label: 'Leaderboard', href: '/leaderboard', soon: false },
 ];
 
 function NavLinks() {
