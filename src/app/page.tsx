@@ -108,9 +108,8 @@ export default function HomePage() {
             className="flex flex-wrap gap-3 mb-8"
           >
             {[
-              { label: 'PRIZE POOL', sub: 'ACTIVE LEAGUES', val: null },
-              { label: 'PLAYERS', sub: 'REGISTERED', val: null },
-              { label: 'UNTIL DEADLINE', sub: '', val: 'Open' },
+              
+              { label: 'UNTIL DEADLINE', sub: '', val: 'JUN 11,19:00 UTC' },
             ].map((c) => (
               <div
                 key={c.label}
@@ -143,43 +142,11 @@ export default function HomePage() {
           </motion.div>
         </motion.div>
 
-        {/* Scroll hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="absolute bottom-7 left-6 md:left-16 flex items-center gap-2 text-gray-600 text-[10px] uppercase tracking-[0.2em]"
-        >
-          <motion.span animate={{ y: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>↓</motion.span>
-          How it works
-        </motion.div>
+        
       </section>
 
-      {/* ══════════ NEON GREEN TICKER ══════════ */}
-      <div className="relative w-full bg-green-500 py-3 overflow-hidden border-y border-green-400">
-        <motion.div
-          animate={{ x: ['0%', '-50%'] }}
-          transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
-          className="flex gap-0 whitespace-nowrap"
-        >
-          {Array.from({ length: 10 }).map((_, i) => (
-            <span key={i} className="inline-flex items-center gap-3 text-white font-black uppercase text-xs tracking-[0.25em] pr-6">
-              <span className="text-white/80">⚽</span>
-              INJMATCH
-              <span className="text-white/40 mx-1">•</span>
-              PREDICT
-              <span className="text-white/40 mx-1">•</span>
-              WIN INJ
-              <span className="text-white/40 mx-1">•</span>
-              WORLD CUP 2026
-              <span className="text-white/40 mx-1">•</span>
-              ON INJECTIVE
-              <span className="text-white/40 mx-1">•</span>
-            </span>
-          ))}
-        </motion.div>
-      </div>
-
+  
+      
       {/* ══════════ HOW IT WORKS ══════════ */}
       <section className="py-20 px-6 md:px-16 bg-[#0a0a0a]">
         <FadeUp className="mb-10">
@@ -191,15 +158,15 @@ export default function HomePage() {
           {[
             {
               n: '01',
-              text: 'Pick 11 + 3 from real World Cup squads before the round deadline.',
+              text: 'Pick 11 + 3 from real World Cup squads before the tournament deadline.',
             },
             {
               n: '02',
-              text: 'Submit predictions. Earn points from real match actions — goals, assists, clean sheets, ratings.',
+              text: 'Submit predictions. Earn points from real match actions, goals, assists, clean sheets, ratings.',
             },
             {
               n: '03',
-              text: 'Top 10 of each round split the INJ prize pool. Claim on the leaderboard.',
+              text: 'Top 10 of tournament split the INJ prize pool. Claim on the leaderboard.',
             },
           ].map((step, i) => (
             <FadeUp key={step.n} delay={i * 0.1}>
