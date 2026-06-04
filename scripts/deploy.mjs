@@ -7,61 +7,18 @@
  * Usage (mnemonic):
  *   MNEMONIC="word1 word2 ..." node scripts/deploy.mjs
  *
- * Prints the contract address — paste into NEXT_PUBLIC_CONTRACT_ADDRESS in .env.local
  * Get testnet INJ at: https://testnet.faucet.injective.network/
  */
 
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
-const __dir = dirname(fileURLToPath(import.meta.url));
-const RPC    = 'https://testnet.sentry.tm.injective.network:443';
-const PREFIX = 'inj';
-
-// ── Injective EthAccount parser ──────────────────────────────────────────────
-// Injective uses /injective.types.v1beta1.EthAccount which wraps a BaseAccount.
-// CosmJS doesn't know this type — we decode it manually.
-
-function parseEthAccount(anyAccount) {
-  const { BaseAccount } = require('cosmjs-types/cosmos/auth/v1beta1/auth');
-  const { accountFromAny } = require('@cosmjs/stargate');
-
-  if (anyAccount.typeUrl !== '/injective.types.v1beta1.EthAccount') {
-    return accountFromAny(anyAccount);
-  }
-
-  // EthAccount protobuf: field 1 = BaseAccount (length-delimited), field 2 = code_hash bytes
-  // Manually read field 1 from the encoded bytes
-  const bytes = anyAccount.value;
-  let offset = 0;
-
-  // Read field tag (should be 0x0a = field 1, wire type 2)
-  if (bytes[offset] !== 0x0a) {
-    throw new Error(`Unexpected EthAccount encoding at byte 0: 0x${bytes[0].toString(16)}`);
-  }
-  offset++;
-
-  // Read varint-encoded length of BaseAccount bytes
-  let len = 0, shift = 0;
-  while (offset < bytes.length) {
-    const b = bytes[offset++];
-    len |= (b & 0x7f) << shift;
-    if (!(b & 0x80)) break;
-    shift += 7;
-  }
-
-  const baseAccount = BaseAccount.decode(bytes.slice(offset, offset + len));
-
-  return {
-    address:       baseAccount.address,
-    pubkey:        baseAccount.pubKey
-      ? { type: baseAccount.pubKey.typeUrl, value: Buffer.from(baseAccount.pubKey.value).toString('base64') }
-      : null,
-    accountNumber: Number(baseAccount.accountNumber),
-    sequence:      Number(baseAccount.sequence),
-  };
-}
+const require = createRequire(import.meta.url);
+const __dir   = dirname(fileURLToPath(import.meta.url));
+const RPC     = 'https://testnet.sentry.tm.injective.network:443';
+const PREFIX  = 'inj';
 
 async function main() {
   const privateKeyHex = process.env.PRIVATE_KEY;
@@ -75,10 +32,48 @@ async function main() {
   }
 
   const { SigningCosmWasmClient } = await import('@cosmjs/cosmwasm-stargate');
-  const { DirectSecp256k1Wallet, DirectSecp256k1HdWallet } = await import('@cosmjs/proto-signing');
-  const { GasPrice } = await import('@cosmjs/stargate');
+  const { DirectSecp256k1Wallet, DirectSecp256k1HdWallet, Registry } = await import('@cosmjs/proto-signing');
+  const { GasPrice, defaultRegistryTypes } = await import('@cosmjs/stargate');
+  const { BaseAccount } = require('cosmjs-types/cosmos/auth/v1beta1/auth');
 
-  // Build signer
+  // ── Patch: teach CosmJS how to decode Injective's EthAccount ────────────────
+  // EthAccount wraps a standard BaseAccount at protobuf field 1.
+  // We monkey-patch the internal account decoder used by the client.
+  const cosmStargate = require('@cosmjs/stargate');
+  const origAccountFromAny = cosmStargate.accountFromAny.bind(cosmStargate);
+
+  function patchedAccountFromAny(anyAccount) {
+    if (anyAccount.typeUrl === '/injective.types.v1beta1.EthAccount') {
+      const bytes  = anyAccount.value;
+      let offset   = 0;
+      // Field 1 tag = 0x0a (field number 1, wire type 2)
+      if (bytes[offset] !== 0x0a) throw new Error('Unexpected EthAccount bytes');
+      offset++;
+      // Read varint length
+      let len = 0, shift = 0;
+      while (offset < bytes.length) {
+        const b = bytes[offset++];
+        len |= (b & 0x7f) << shift;
+        if (!(b & 0x80)) break;
+        shift += 7;
+      }
+      const base = BaseAccount.decode(bytes.slice(offset, offset + len));
+      return {
+        address:       base.address,
+        pubkey:        base.pubKey
+          ? { type: base.pubKey.typeUrl, value: Buffer.from(base.pubKey.value).toString('base64') }
+          : null,
+        accountNumber: Number(base.accountNumber),
+        sequence:      Number(base.sequence),
+      };
+    }
+    return origAccountFromAny(anyAccount);
+  }
+
+  // Replace the exported function so all internal callers use the patched version
+  cosmStargate.accountFromAny = patchedAccountFromAny;
+
+  // ── Build signer ─────────────────────────────────────────────────────────────
   let signer;
   if (privateKeyHex) {
     const hex      = privateKeyHex.startsWith('0x') ? privateKeyHex.slice(2) : privateKeyHex;
@@ -95,10 +90,7 @@ async function main() {
   const client = await SigningCosmWasmClient.connectWithSigner(
     RPC,
     signer,
-    {
-      gasPrice:      GasPrice.fromString('500000000inj'),
-      accountParser: parseEthAccount,
-    },
+    { gasPrice: GasPrice.fromString('500000000inj') },
   );
 
   const balance = await client.getBalance(account.address, 'inj');
@@ -110,14 +102,14 @@ async function main() {
     process.exit(1);
   }
 
-  // ── Step 1: Upload WASM ────────────────────────────────────────────────────
+  // ── Upload WASM ───────────────────────────────────────────────────────────────
   const wasm = readFileSync(join(__dir, '../contracts/artifacts/injmatch.wasm'));
   console.log('📦  Uploading WASM...');
   const uploadResult = await client.upload(account.address, wasm, 'auto');
   console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
   console.log(`   TX: ${uploadResult.transactionHash}\n`);
 
-  // ── Step 2: Instantiate ────────────────────────────────────────────────────
+  // ── Instantiate ───────────────────────────────────────────────────────────────
   console.log('🚀  Instantiating contract...');
   const instantiateResult = await client.instantiate(
     account.address,
