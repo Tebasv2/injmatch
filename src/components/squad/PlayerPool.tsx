@@ -7,34 +7,52 @@ import { PLAYERS } from '@/lib/players';
 import type { Player } from '@/types/squad';
 
 type PositionFilter = 'ALL' | 'GK' | 'DEF' | 'MID' | 'FWD';
+type SortMode = 'rating' | 'price_asc' | 'price_desc' | 'form';
 
 const FILTERS: PositionFilter[] = ['ALL', 'GK', 'DEF', 'MID', 'FWD'];
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'rating',      label: 'Rating' },
+  { value: 'price_desc',  label: 'Price ↓' },
+  { value: 'price_asc',   label: 'Price ↑' },
+  { value: 'form',        label: 'Form' },
+];
 
 interface Props {
   selectedIds: string[];
   positionHint?: 'GK' | 'DEF' | 'MID' | 'FWD' | null;
   onSelect: (player: Player) => void;
   formation: string;
+  remainingBudget: number;
 }
 
-export function PlayerPool({ selectedIds, positionHint, onSelect, formation }: Props) {
+export function PlayerPool({ selectedIds, positionHint, onSelect, formation, remainingBudget }: Props) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PositionFilter>(positionHint ?? 'ALL');
+  const [sort, setSort] = useState<SortMode>('rating');
 
-  // When positionHint changes (user clicked a slot), auto-switch filter
   useEffect(() => {
     if (positionHint) setFilter(positionHint);
   }, [positionHint]);
 
-  const filtered = useMemo(() =>
-    PLAYERS.filter((p) => {
+  const filtered = useMemo(() => {
+    const list = PLAYERS.filter((p) => {
       const matchPos = filter === 'ALL' || p.position === filter;
       const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                          p.countryCode.toLowerCase().includes(search.toLowerCase());
+                          p.countryCode.toLowerCase().includes(search.toLowerCase()) ||
+                          p.club.toLowerCase().includes(search.toLowerCase());
       return matchPos && matchSearch;
-    }),
-    [filter, search],
-  );
+    });
+
+    list.sort((a, b) => {
+      if (sort === 'rating')     return b.rating - a.rating;
+      if (sort === 'price_desc') return b.price - a.price;
+      if (sort === 'price_asc')  return a.price - b.price;
+      if (sort === 'form')       return b.form - a.form;
+      return 0;
+    });
+
+    return list;
+  }, [filter, search, sort]);
 
   return (
     <div className="flex flex-col h-full bg-[#0d0d0d] border border-gray-800 rounded-2xl overflow-hidden">
@@ -49,13 +67,13 @@ export function PlayerPool({ selectedIds, positionHint, onSelect, formation }: P
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search player..."
+          placeholder="Search player, club or country..."
           className="w-full bg-[#1a1a1a] border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition-colors"
         />
       </div>
 
-      {/* Position filters */}
-      <div className="flex gap-2 px-3 pt-3 pb-2">
+      {/* Position filters + sort */}
+      <div className="flex gap-2 px-3 pt-3 pb-1">
         {FILTERS.map((f) => (
           <motion.button
             key={f}
@@ -72,22 +90,41 @@ export function PlayerPool({ selectedIds, positionHint, onSelect, formation }: P
         ))}
       </div>
 
-      {/* Player list */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 scrollbar-thin" style={{ maxHeight: '400px' }}>
-        {filtered.map((player) => (
-          <PoolRow
-            key={player.id}
-            player={player}
-            isSelected={selectedIds.includes(player.id)}
-            onClick={() => onSelect(player)}
-          />
+      {/* Sort row */}
+      <div className="flex gap-2 px-3 pb-2">
+        {SORT_OPTIONS.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => setSort(s.value)}
+            className={`flex-1 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-colors ${
+              sort === s.value
+                ? 'text-green-400 border border-green-500/40 bg-green-500/10'
+                : 'text-gray-600 border border-gray-800 hover:text-gray-400'
+            }`}
+          >
+            {s.label}
+          </button>
         ))}
+      </div>
+
+      {/* Player list */}
+      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 scrollbar-thin" style={{ maxHeight: '560px' }}>
+        {filtered.map((player) => {
+          const isSelected = selectedIds.includes(player.id);
+          const canAfford = isSelected || player.price <= remainingBudget;
+          return (
+            <div key={player.id} className={!canAfford ? 'opacity-40 pointer-events-none' : undefined}>
+              <PoolRow
+                player={player}
+                isSelected={isSelected}
+                onClick={() => onSelect(player)}
+              />
+            </div>
+          );
+        })}
         {filtered.length === 0 && (
           <p className="text-center text-gray-600 text-xs py-8 uppercase tracking-widest">No players found</p>
         )}
-        <p className="text-center text-gray-700 text-[9px] pt-2 uppercase tracking-widest">
-          + Hundreds more from every squad
-        </p>
       </div>
     </div>
   );

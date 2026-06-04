@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pitch } from '@/components/squad/Pitch';
 import { PlayerPool } from '@/components/squad/PlayerPool';
-import { FORMATIONS } from '@/lib/players';
+import { FORMATIONS, SQUAD_BUDGET } from '@/lib/players';
 import type { Player, Formation } from '@/types/squad';
 
 const FORMATION_OPTIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1'];
@@ -21,6 +21,39 @@ function getSlotPositionHint(formation: Formation, slotIndex: number): 'GK' | 'D
   return 'MID';
 }
 
+function BudgetBar({ spent, budget }: { spent: number; budget: number }) {
+  const pct = Math.min((spent / budget) * 100, 100);
+  const remaining = budget - spent;
+  const isOver = remaining < 0;
+  const isLow = remaining >= 0 && remaining < 10;
+
+  return (
+    <div className="bg-[#111] border border-gray-800 rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[9px] text-gray-500 uppercase tracking-[0.25em] font-bold">Budget</p>
+        <div className="flex items-baseline gap-1">
+          <span className={`text-lg font-black ${isOver ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-green-400'}`}>
+            {Math.abs(remaining).toFixed(1)}
+          </span>
+          <span className="text-[10px] text-gray-500">INJ {isOver ? 'over' : 'left'}</span>
+        </div>
+      </div>
+      <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full transition-colors ${isOver ? 'bg-red-500' : isLow ? 'bg-yellow-500' : 'bg-green-500'}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        />
+      </div>
+      <div className="flex justify-between mt-1.5">
+        <span className="text-[9px] text-gray-600">{spent.toFixed(1)} INJ spent</span>
+        <span className="text-[9px] text-gray-600">{budget} INJ total</span>
+      </div>
+    </div>
+  );
+}
+
 export default function SquadPage() {
   const [formation, setFormation] = useState<Formation>('4-3-3');
   const [starters, setStarters] = useState<(Player | null)[]>(Array(11).fill(null));
@@ -28,12 +61,15 @@ export default function SquadPage() {
   const [selectedSlot, setSelectedSlot] = useState<{ type: 'starter' | 'bench'; index: number } | null>(null);
   const [saved, setSaved] = useState(false);
   const [positionError, setPositionError] = useState<string | null>(null);
+  const [budgetError, setBudgetError] = useState<string | null>(null);
 
-  const selectedIds = [
-    ...starters.filter(Boolean).map((p) => p!.id),
-    ...bench.filter(Boolean).map((p) => p!.id),
-  ];
+  const allPlayers = useMemo(() => [
+    ...starters.filter(Boolean) as Player[],
+    ...bench.filter(Boolean) as Player[],
+  ], [starters, bench]);
 
+  const selectedIds = allPlayers.map((p) => p.id);
+  const totalSpent = allPlayers.reduce((sum, p) => sum + p.price, 0);
   const totalSelected = selectedIds.length;
   const startersCount = starters.filter(Boolean).length;
   const benchCount = bench.filter(Boolean).length;
@@ -51,7 +87,7 @@ export default function SquadPage() {
   }, []);
 
   const handlePlayerSelect = useCallback((player: Player) => {
-    // If already selected, deselect
+    // Deselect if already in squad
     if (selectedIds.includes(player.id)) {
       setStarters((prev) => prev.map((p) => (p?.id === player.id ? null : p)));
       setBench((prev) => prev.map((p) => (p?.id === player.id ? null : p)));
@@ -59,7 +95,7 @@ export default function SquadPage() {
     }
     if (!selectedSlot) return;
 
-    // Enforce position for starter slots
+    // Position enforcement for starter slots
     if (selectedSlot.type === 'starter') {
       const required = getSlotPositionHint(formation, selectedSlot.index);
       if (player.position !== required) {
@@ -69,13 +105,19 @@ export default function SquadPage() {
       }
     }
 
+    // Budget enforcement
+    if (totalSpent + player.price > SQUAD_BUDGET) {
+      setBudgetError(`Not enough budget — ${player.name} costs ${player.price.toFixed(1)} INJ (${(SQUAD_BUDGET - totalSpent).toFixed(1)} remaining)`);
+      setTimeout(() => setBudgetError(null), 3500);
+      return;
+    }
+
     if (selectedSlot.type === 'starter') {
       setStarters((prev) => {
         const next = [...prev];
         next[selectedSlot.index] = player;
         return next;
       });
-      // Advance to next empty starter slot
       setSelectedSlot((prev) => {
         if (!prev) return null;
         for (let i = prev.index + 1; i < 11; i++) {
@@ -97,7 +139,7 @@ export default function SquadPage() {
         return null;
       });
     }
-  }, [selectedSlot, selectedIds, starters, bench, formation]);
+  }, [selectedSlot, selectedIds, starters, bench, formation, totalSpent]);
 
   const handleSave = () => {
     setSaved(true);
@@ -134,7 +176,6 @@ export default function SquadPage() {
               </button>
             ))}
           </div>
-
           <button
             onClick={handleReset}
             className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-colors px-2"
@@ -147,7 +188,7 @@ export default function SquadPage() {
       {/* Main layout */}
       <div className="flex flex-col lg:flex-row gap-4 p-4 md:p-6 max-w-[1400px] mx-auto">
 
-        {/* Left — pitch + bench */}
+        {/* Left — pitch + bench + budget */}
         <div className="lg:w-[420px] flex-shrink-0 flex flex-col gap-4">
           {/* Pitch */}
           <Pitch
@@ -156,6 +197,9 @@ export default function SquadPage() {
             selectedSlot={selectedSlot?.type === 'starter' ? selectedSlot.index : null}
             onSlotClick={(i) => handleSlotClick('starter', i)}
           />
+
+          {/* Budget bar */}
+          <BudgetBar spent={totalSpent} budget={SQUAD_BUDGET} />
 
           {/* Bench */}
           <div className="bg-[#111] border border-gray-800 rounded-2xl p-4">
@@ -169,7 +213,7 @@ export default function SquadPage() {
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => handleSlotClick('bench', i)}
-                  className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${
+                  className={`flex-1 flex flex-col items-start gap-1 px-3 py-2 rounded-xl border text-left transition-all ${
                     selectedSlot?.type === 'bench' && selectedSlot.index === i
                       ? 'border-green-400 bg-green-500/10'
                       : 'border-gray-700 bg-[#0d0d0d] hover:border-gray-600'
@@ -177,13 +221,16 @@ export default function SquadPage() {
                 >
                   {player ? (
                     <>
-                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
-                        player.position === 'GK' ? 'bg-yellow-500/20 text-yellow-400' :
-                        player.position === 'DEF' ? 'bg-blue-500/20 text-blue-400' :
-                        player.position === 'MID' ? 'bg-green-500/20 text-green-400' :
-                        'bg-red-500/20 text-red-400'
-                      }`}>{player.position}</span>
-                      <span className="text-xs font-bold text-white truncate">{player.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                          player.position === 'GK' ? 'bg-yellow-500/20 text-yellow-400' :
+                          player.position === 'DEF' ? 'bg-blue-500/20 text-blue-400' :
+                          player.position === 'MID' ? 'bg-green-500/20 text-green-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>{player.position}</span>
+                        <span className="text-xs font-bold text-white truncate">{player.name.split(' ').slice(-1)[0]}</span>
+                      </div>
+                      <span className="text-[9px] text-green-400 font-bold">{player.price.toFixed(1)} INJ</span>
                     </>
                   ) : (
                     <span className="text-[10px] text-gray-600 uppercase tracking-widest">+ Sub</span>
@@ -219,7 +266,7 @@ export default function SquadPage() {
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={handleSave}
-                  disabled={totalSelected < 11}
+                  disabled={totalSelected < 11 || totalSpent > SQUAD_BUDGET}
                   className="bg-green-500 disabled:bg-gray-800 disabled:text-gray-600 text-black font-black uppercase tracking-widest text-xs px-6 py-2.5 rounded-xl transition-colors"
                 >
                   Save Squad
@@ -231,10 +278,11 @@ export default function SquadPage() {
 
         {/* Right — player pool */}
         <div className="flex-1 min-h-[500px]">
-          {/* Instruction banner */}
+          {/* Banners */}
           <AnimatePresence>
-            {selectedSlot && (
+            {selectedSlot && !positionError && !budgetError && (
               <motion.div
+                key="hint"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -248,7 +296,6 @@ export default function SquadPage() {
             )}
           </AnimatePresence>
 
-          {/* Position error toast */}
           <AnimatePresence>
             {positionError && (
               <motion.div
@@ -259,8 +306,22 @@ export default function SquadPage() {
                 transition={{ duration: 0.35 }}
                 className="mb-3 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/40 text-red-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2"
               >
-                <span className="text-base">⛔</span>
-                {positionError}
+                <span>⛔</span> {positionError}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {budgetError && (
+              <motion.div
+                key="budget-error"
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: [12, -8, 6, -4, 0] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                className="mb-3 px-4 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/40 text-yellow-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+              >
+                <span>💰</span> {budgetError}
               </motion.div>
             )}
           </AnimatePresence>
@@ -270,6 +331,7 @@ export default function SquadPage() {
             positionHint={positionHint}
             onSelect={handlePlayerSelect}
             formation={formation}
+            remainingBudget={SQUAD_BUDGET - totalSpent}
           />
         </div>
       </div>
