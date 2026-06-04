@@ -17,10 +17,11 @@ const WalletButton = dynamic(
 );
 
 const NAV = [
-  { label: 'World Cup', href: '/', soon: false },
-  { label: 'Fixtures',  href: '/fixtures', soon: false },
-  { label: 'Squad',     href: '/squad', soon: false },
-  { label: 'Leaderboard', href: '/leaderboard', soon: true },
+  { label: 'World Cup',   href: '/',            soon: false },
+  { label: 'Fixtures',    href: '/fixtures',    soon: false },
+  { label: 'Squad',       href: '/squad',       soon: false },
+  { label: 'Scores',      href: '/scores',      soon: false },
+  { label: 'Leaderboard', href: '/leaderboard', soon: true  },
 ];
 
 function NavLinks() {
