@@ -27,6 +27,7 @@ export default function SquadPage() {
   const [bench, setBench] = useState<(Player | null)[]>(Array(3).fill(null));
   const [selectedSlot, setSelectedSlot] = useState<{ type: 'starter' | 'bench'; index: number } | null>(null);
   const [saved, setSaved] = useState(false);
+  const [positionError, setPositionError] = useState<string | null>(null);
 
   const selectedIds = [
     ...starters.filter(Boolean).map((p) => p!.id),
@@ -58,6 +59,16 @@ export default function SquadPage() {
     }
     if (!selectedSlot) return;
 
+    // Enforce position for starter slots
+    if (selectedSlot.type === 'starter') {
+      const required = getSlotPositionHint(formation, selectedSlot.index);
+      if (player.position !== required) {
+        setPositionError(`This slot requires a ${required} — ${player.name} is a ${player.position}`);
+        setTimeout(() => setPositionError(null), 3000);
+        return;
+      }
+    }
+
     if (selectedSlot.type === 'starter') {
       setStarters((prev) => {
         const next = [...prev];
@@ -86,7 +97,7 @@ export default function SquadPage() {
         return null;
       });
     }
-  }, [selectedSlot, selectedIds, starters, bench]);
+  }, [selectedSlot, selectedIds, starters, bench, formation]);
 
   const handleSave = () => {
     setSaved(true);
@@ -233,6 +244,23 @@ export default function SquadPage() {
                 {selectedSlot.type === 'starter'
                   ? `Select a ${positionHint} for slot ${selectedSlot.index + 1}`
                   : `Select a substitute for bench slot ${selectedSlot.index + 1}`}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Position error toast */}
+          <AnimatePresence>
+            {positionError && (
+              <motion.div
+                key="pos-error"
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: [12, -8, 6, -4, 0] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                className="mb-3 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/40 text-red-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+              >
+                <span className="text-base">⛔</span>
+                {positionError}
               </motion.div>
             )}
           </AnimatePresence>

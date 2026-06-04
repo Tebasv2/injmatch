@@ -28,7 +28,7 @@ export function PitchCard({ player, positionHint, isSelected, onClick }: PitchCa
     >
       {/* Avatar circle */}
       <div
-        className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-black border-2 transition-all ${
+        className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-black border-2 transition-all overflow-hidden ${
           isSelected
             ? 'border-green-400 bg-[#1a2a1a]'
             : player
@@ -37,9 +37,23 @@ export function PitchCard({ player, positionHint, isSelected, onClick }: PitchCa
         }`}
       >
         {player ? (
-          <span className="text-white text-[11px] font-black leading-none">{player.shortName}</span>
+          player.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={player.avatar}
+              alt={player.shortName}
+              className="w-full h-full object-cover object-top"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).nextElementSibling?.removeAttribute('hidden');
+              }}
+            />
+          ) : null
         ) : (
           <span className="text-gray-600 text-lg">+</span>
+        )}
+        {player && (
+          <span hidden={!!player.avatar} className="text-white text-[11px] font-black leading-none">{player.shortName}</span>
         )}
       </div>
 
@@ -70,10 +84,18 @@ export function PoolRow({ player, isSelected, onClick }: PoolRowProps) {
       }`}
     >
       {/* Avatar */}
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-black flex-shrink-0 ${
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-black flex-shrink-0 overflow-hidden ${
         isSelected ? 'bg-green-500/20 text-green-400' : 'bg-[#1a1a1a] text-gray-300'
       }`}>
-        {player.shortName}
+        {player.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={player.avatar}
+            alt={player.shortName}
+            className="w-full h-full object-cover object-top"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).replaceWith(Object.assign(document.createElement('span'), { textContent: player.shortName, className: 'text-[10px] font-black' })); }}
+          />
+        ) : player.shortName}
       </div>
 
       {/* Info */}
