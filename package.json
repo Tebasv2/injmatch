@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "contract:build": "cd contracts && cargo build --release --target wasm32-unknown-unknown && wasm-opt -Os target/wasm32-unknown-unknown/release/injmatch.wasm -o artifacts/injmatch.wasm",
+    "contract:deploy": "node scripts/deploy.mjs",
+    "contract:test": "node scripts/test-squad.mjs"
   },
   "dependencies": {
     "@cosmjs/cosmwasm-stargate": "^0.32.4",
