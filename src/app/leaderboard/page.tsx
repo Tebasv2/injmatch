@@ -42,6 +42,11 @@ const ENTRIES: LeaderboardEntry[] = [
   { rank: 8, address: 'inj1eee555fff666ggg777hhh888iii999jjj000kkk', displayName: 'DefiSquad',      formation: '3-5-2',   totalPoints: 251, weekPoints: 38, starterIds: ['ronaldo','vinicius','salah','bellingham','pedri','kimmich','modric','vandijk','militao','dias','courtois'],       benchIds: ['mbappe','hakimi','rashford'] },
   { rank: 9, address: 'inj1fff666ggg777hhh888iii999jjj000kkk111lll', displayName: 'Web3Gaffer',     formation: '4-3-3',   totalPoints: 238, weekPoints: 35, starterIds: ['mbappe','haaland','bellingham','salah','kimmich','pedri','hakimi','vandijk','rudiger','gvardiol','alisson'],      benchIds: ['vinicius','modric','dias'] },
   { rank: 10, address: 'inj1ggg777hhh888iii999jjj000kkk111lll222mmm', displayName: 'TopElevenINJ', formation: '4-4-2',   totalPoints: 224, weekPoints: 32, starterIds: ['ronaldo','salah','vinicius','bellingham','modric','pedri','trent','vandijk','militao','dias','courtois'],         benchIds: ['mbappe','hakimi','gvardiol'] },
+  { rank: 11, address: 'inj1hhh888iii999jjj000kkk111lll222mmm333nnn', displayName: 'FantasyChain',  formation: '4-3-3',   totalPoints: 211, weekPoints: 28, starterIds: ['haaland','mbappe','bellingham','kimmich','pedri','salah','hakimi','vandijk','rudiger','dias','alisson'],         benchIds: ['vinicius','modric','cancelo'] },
+  { rank: 12, address: 'inj1iii999jjj000kkk111lll222mmm333nnn444ooo', displayName: 'CosmosPick',    formation: '4-2-3-1', totalPoints: 198, weekPoints: 25, starterIds: ['ronaldo','vinicius','salah','bellingham','modric','pedri','trent','vandijk','militao','gvardiol','courtois'],     benchIds: ['haaland','kimmich','dias'] },
+  { rank: 13, address: 'inj1jjj000kkk111lll222mmm333nnn444ooo555ppp', displayName: 'HashTagGoal',   formation: '4-3-3',   totalPoints: 185, weekPoints: 22, starterIds: ['mbappe','haaland','salah','bellingham','pedri','kimmich','hakimi','vandijk','militao','gvardiol','alisson'],     benchIds: ['vinicius','modric','dias'] },
+  { rank: 14, address: 'inj1kkk111lll222mmm333nnn444ooo555ppp666qqq', displayName: 'ValidatorFC',   formation: '3-5-2',   totalPoints: 172, weekPoints: 19, starterIds: ['ronaldo','vinicius','bellingham','modric','salah','pedri','kimmich','vandijk','rudiger','dias','courtois'],      benchIds: ['haaland','hakimi','rashford'] },
+  { rank: 15, address: 'inj1lll222mmm333nnn444ooo555ppp666qqq777rrr', displayName: 'ChainManager',  formation: '4-4-2',   totalPoints: 159, weekPoints: 17, starterIds: ['haaland','mbappe','vinicius','salah','bellingham','modric','trent','vandijk','militao','dias','alisson'],        benchIds: ['pedri','hakimi','gvardiol'] },
 ];
 
 function RankBadge({ rank }: { rank: number }) {
@@ -160,7 +165,7 @@ export default function LeaderboardPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto px-4 py-10 relative">
           <h1 className="text-3xl font-black tracking-tight">Leaderboard</h1>
-          <p className="text-white/40 mt-1 text-sm">Top 10 managers · WC2026</p>
+          <p className="text-white/40 mt-1 text-sm">WC2026 · {ENTRIES.length} managers</p>
         </div>
       </div>
 
