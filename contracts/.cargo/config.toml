@@ -2,3 +2,6 @@
 wasm = "build --release --target wasm32-unknown-unknown --lib"
 wasm-debug = "build --target wasm32-unknown-unknown --lib"
 schema = "run --example schema"
+
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=-bulk-memory"]
