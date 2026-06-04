@@ -32,7 +32,7 @@ export async function GET() {
       utcDate: m.utcDate,
       status: m.status,
       stage: m.stage,
-      group: m.group ? `Group ${m.group}` : undefined,
+      group: m.group ? `Group ${m.group.replace(/^GROUP_/, '')}` : undefined,
       matchday: m.matchday,
       homeTeam: {
         name: m.homeTeam.name,

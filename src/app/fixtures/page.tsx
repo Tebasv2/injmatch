@@ -37,6 +37,17 @@ const HOST_COLORS: Record<string, string> = {
   USA: 'text-blue-400', CAN: 'text-red-400', MEX: 'text-green-400',
 };
 
+function Crest({ src, name }: { src: string; name: string }) {
+  if (src.startsWith('http')) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={name} className="w-7 h-7 object-contain flex-shrink-0"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+    );
+  }
+  return <span className="text-2xl leading-none">{src}</span>;
+}
+
 // ── MatchCard ─────────────────────────────────────────────────────────────────
 
 function MatchCard({ match }: { match: WCMatch }) {
@@ -80,7 +91,7 @@ function MatchCard({ match }: { match: WCMatch }) {
         {/* Home */}
         <div className="flex-1 flex items-center justify-end gap-2">
           <span className="text-sm font-bold text-white text-right truncate">{match.homeTeam.shortName}</span>
-          <span className="text-xl">{match.homeTeam.crest}</span>
+          <Crest src={match.homeTeam.crest} name={match.homeTeam.name} />
         </div>
 
         {/* Score / time */}
@@ -103,7 +114,7 @@ function MatchCard({ match }: { match: WCMatch }) {
 
         {/* Away */}
         <div className="flex-1 flex items-center justify-start gap-2">
-          <span className="text-xl">{match.awayTeam.crest}</span>
+          <Crest src={match.awayTeam.crest} name={match.awayTeam.name} />
           <span className="text-sm font-bold text-white truncate">{match.awayTeam.shortName}</span>
         </div>
       </div>
