@@ -11,6 +11,25 @@
 const RPC    = 'https://testnet.sentry.tm.injective.network:443';
 const PREFIX = 'inj';
 
+function parseEthAccount(anyAccount) {
+  const { BaseAccount } = require('cosmjs-types/cosmos/auth/v1beta1/auth');
+  const { accountFromAny } = require('@cosmjs/stargate');
+  if (anyAccount.typeUrl !== '/injective.types.v1beta1.EthAccount') return accountFromAny(anyAccount);
+  const bytes = anyAccount.value;
+  let offset = 0;
+  if (bytes[offset] !== 0x0a) throw new Error('Unexpected EthAccount encoding');
+  offset++;
+  let len = 0, shift = 0;
+  while (offset < bytes.length) { const b = bytes[offset++]; len |= (b & 0x7f) << shift; if (!(b & 0x80)) break; shift += 7; }
+  const baseAccount = BaseAccount.decode(bytes.slice(offset, offset + len));
+  return {
+    address: baseAccount.address,
+    pubkey: baseAccount.pubKey ? { type: baseAccount.pubKey.typeUrl, value: Buffer.from(baseAccount.pubKey.value).toString('base64') } : null,
+    accountNumber: Number(baseAccount.accountNumber),
+    sequence: Number(baseAccount.sequence),
+  };
+}
+
 async function main() {
   const contractAddress = process.env.CONTRACT;
   const privKey1  = process.env.PRIVATE_KEY;
@@ -40,7 +59,7 @@ async function main() {
   async function saveSquad(signer, squad) {
     const [account] = await signer.getAccounts();
     const client = await SigningCosmWasmClient.connectWithSigner(
-      RPC, signer, { gasPrice: GasPrice.fromString('500000000inj') },
+      RPC, signer, { gasPrice: GasPrice.fromString('500000000inj'), accountParser: parseEthAccount },
     );
     console.log(`\n📤  Saving squad for ${account.address}`);
     const result = await client.execute(

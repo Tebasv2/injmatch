@@ -19,6 +19,50 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const RPC    = 'https://testnet.sentry.tm.injective.network:443';
 const PREFIX = 'inj';
 
+// ── Injective EthAccount parser ──────────────────────────────────────────────
+// Injective uses /injective.types.v1beta1.EthAccount which wraps a BaseAccount.
+// CosmJS doesn't know this type — we decode it manually.
+
+function parseEthAccount(anyAccount) {
+  const { BaseAccount } = require('cosmjs-types/cosmos/auth/v1beta1/auth');
+  const { accountFromAny } = require('@cosmjs/stargate');
+
+  if (anyAccount.typeUrl !== '/injective.types.v1beta1.EthAccount') {
+    return accountFromAny(anyAccount);
+  }
+
+  // EthAccount protobuf: field 1 = BaseAccount (length-delimited), field 2 = code_hash bytes
+  // Manually read field 1 from the encoded bytes
+  const bytes = anyAccount.value;
+  let offset = 0;
+
+  // Read field tag (should be 0x0a = field 1, wire type 2)
+  if (bytes[offset] !== 0x0a) {
+    throw new Error(`Unexpected EthAccount encoding at byte 0: 0x${bytes[0].toString(16)}`);
+  }
+  offset++;
+
+  // Read varint-encoded length of BaseAccount bytes
+  let len = 0, shift = 0;
+  while (offset < bytes.length) {
+    const b = bytes[offset++];
+    len |= (b & 0x7f) << shift;
+    if (!(b & 0x80)) break;
+    shift += 7;
+  }
+
+  const baseAccount = BaseAccount.decode(bytes.slice(offset, offset + len));
+
+  return {
+    address:       baseAccount.address,
+    pubkey:        baseAccount.pubKey
+      ? { type: baseAccount.pubKey.typeUrl, value: Buffer.from(baseAccount.pubKey.value).toString('base64') }
+      : null,
+    accountNumber: Number(baseAccount.accountNumber),
+    sequence:      Number(baseAccount.sequence),
+  };
+}
+
 async function main() {
   const privateKeyHex = process.env.PRIVATE_KEY;
   const mnemonic      = process.env.MNEMONIC;
@@ -37,8 +81,8 @@ async function main() {
   // Build signer
   let signer;
   if (privateKeyHex) {
-    const keyHex = privateKeyHex.startsWith('0x') ? privateKeyHex.slice(2) : privateKeyHex;
-    const keyBytes = Uint8Array.from(Buffer.from(keyHex, 'hex'));
+    const hex      = privateKeyHex.startsWith('0x') ? privateKeyHex.slice(2) : privateKeyHex;
+    const keyBytes = Uint8Array.from(Buffer.from(hex, 'hex'));
     signer = await DirectSecp256k1Wallet.fromKey(keyBytes, PREFIX);
   } else {
     signer = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, { prefix: PREFIX });
@@ -51,12 +95,15 @@ async function main() {
   const client = await SigningCosmWasmClient.connectWithSigner(
     RPC,
     signer,
-    { gasPrice: GasPrice.fromString('500000000inj') },
+    {
+      gasPrice:      GasPrice.fromString('500000000inj'),
+      accountParser: parseEthAccount,
+    },
   );
 
   const balance = await client.getBalance(account.address, 'inj');
-  const injBalance = (Number(balance.amount) / 1e18).toFixed(4);
-  console.log(`💰  Balance: ${injBalance} INJ\n`);
+  const injBal  = (Number(balance.amount) / 1e18).toFixed(4);
+  console.log(`💰  Balance: ${injBal} INJ\n`);
 
   if (Number(balance.amount) === 0) {
     console.error('❌  No testnet INJ. Get some at: https://testnet.faucet.injective.network/');
@@ -64,9 +111,7 @@ async function main() {
   }
 
   // ── Step 1: Upload WASM ────────────────────────────────────────────────────
-  const wasmPath = join(__dir, '../contracts/artifacts/injmatch.wasm');
-  const wasm = readFileSync(wasmPath);
-
+  const wasm = readFileSync(join(__dir, '../contracts/artifacts/injmatch.wasm'));
   console.log('📦  Uploading WASM...');
   const uploadResult = await client.upload(account.address, wasm, 'auto');
   console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
@@ -77,19 +122,18 @@ async function main() {
   const instantiateResult = await client.instantiate(
     account.address,
     uploadResult.codeId,
-    {},           // InstantiateMsg is empty
+    {},
     'InjMatch v1',
     'auto',
     { admin: account.address },
   );
 
-  const contractAddress = instantiateResult.contractAddress;
-  console.log(`✅  Contract deployed!\n`);
+  console.log(`\n✅  Contract deployed!\n`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`CONTRACT ADDRESS:\n${contractAddress}`);
+  console.log(`CONTRACT ADDRESS:\n${instantiateResult.contractAddress}`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`\nAdd to .env.local (and Vercel env vars):`);
-  console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}`);
+  console.log(`\nAdd to .env.local and Vercel env vars:`);
+  console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${instantiateResult.contractAddress}`);
   console.log(`\nTX: ${instantiateResult.transactionHash}`);
 }
 
