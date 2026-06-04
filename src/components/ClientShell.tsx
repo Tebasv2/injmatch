@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -23,16 +23,17 @@ const NAV = [
   { label: 'Leaderboard', href: '/leaderboard', soon: false },
 ];
 
-function NavLinks() {
+function NavLinks({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="hidden lg:flex items-center gap-1">
+    <>
       {NAV.map((item) => {
         const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
         return (
           <Link
             key={item.label}
             href={item.soon ? '#' : item.href}
+            onClick={onClose}
             className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
               active ? 'text-green-400' : 'text-gray-400 hover:text-white'
             }`}
@@ -46,52 +47,51 @@ function NavLinks() {
           </Link>
         );
       })}
-    </nav>
+    </>
   );
 }
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<'EN' | 'UA'>('EN');
+  const [lang, setLang]       = useState<'EN' | 'UA'>('EN');
+  const [menuOpen, setMenu]   = useState(false);
 
   return (
     <WalletProvider>
-      {/* Outer wrapper — full width with padding so the container floats */}
+      {/* Nav */}
       <motion.div
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-50 w-full px-4 py-3 bg-transparent"
+        className="sticky top-0 z-50 w-full px-3 py-3 bg-transparent"
       >
-        {/* Inner container — rounded pill with dark bg + border */}
-        <header className="w-full rounded-2xl border border-gray-700/60 bg-[rgba(10,10,10,0.92)] backdrop-blur-xl px-5 py-3 flex items-center justify-between gap-4">
+        <header className="w-full rounded-2xl border border-gray-700/60 bg-[rgba(10,10,10,0.92)] backdrop-blur-xl px-4 py-3 flex items-center justify-between gap-3">
 
-          {/* ── Logo ── */}
+          {/* Logo */}
           <a href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-              <span className="text-black font-black text-sm">⚽</span>
+            <div className="w-7 h-7 bg-green-500 rounded-md flex items-center justify-center">
+              <span className="text-black font-black text-xs">⚽</span>
             </div>
-            <span className="text-lg font-black tracking-tight leading-none">
+            <span className="text-base font-black tracking-tight leading-none">
               <span className="text-white">INJ</span>
               <span className="text-green-400">MATCH</span>
             </span>
           </a>
 
-          {/* ── Nav links ── */}
-          <NavLinks />
+          {/* Desktop nav */}
+          <nav className="hidden lg:flex items-center gap-1">
+            <NavLinks />
+          </nav>
 
-          {/* ── Right side controls ── */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-
-            {/* Language toggle */}
+          {/* Right controls */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Language toggle — hidden on xs */}
             <div className="hidden sm:flex items-center rounded-lg overflow-hidden border border-gray-700">
               {(['EN', 'UA'] as const).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
-                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
-                    lang === l
-                      ? 'bg-green-500 text-black'
-                      : 'text-gray-400 hover:text-white bg-transparent'
+                  className={`px-2.5 py-1 text-xs font-bold uppercase tracking-widest transition-colors ${
+                    lang === l ? 'bg-green-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
                   }`}
                 >
                   {l}
@@ -99,23 +99,50 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
               ))}
             </div>
 
-            {/* Twitter / X link */}
-            <a
-              href="https://x.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden md:flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
-            >
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.727-8.84L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-              
-            </a>
-
-            {/* Connect Wallet */}
+            {/* Wallet */}
             <WalletButton />
+
+            {/* Hamburger — visible below lg */}
+            <button
+              onClick={() => setMenu(v => !v)}
+              className="lg:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5"
+              aria-label="Toggle menu"
+            >
+              <span className={`block w-5 h-0.5 bg-white transition-all ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+              <span className={`block w-5 h-0.5 bg-white transition-all ${menuOpen ? 'opacity-0' : ''}`} />
+              <span className={`block w-5 h-0.5 bg-white transition-all ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+            </button>
           </div>
         </header>
+
+        {/* Mobile drawer */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="lg:hidden mt-2 rounded-2xl border border-gray-700/60 bg-[rgba(10,10,10,0.96)] backdrop-blur-xl px-2 py-3 flex flex-col"
+            >
+              <NavLinks onClose={() => setMenu(false)} />
+              {/* Language toggle in drawer */}
+              <div className="sm:hidden flex items-center rounded-lg overflow-hidden border border-gray-700 mx-3 mt-3 self-start">
+                {(['EN', 'UA'] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLang(l)}
+                    className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                      lang === l ? 'bg-green-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       <main>{children}</main>

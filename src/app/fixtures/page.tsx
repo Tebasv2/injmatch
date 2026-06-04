@@ -230,36 +230,38 @@ export default function FixturesPage() {
 
       <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-6">
         {/* Filters row */}
-        <div className="flex flex-wrap gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-6">
           {/* Search */}
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search team or city…"
-            className="bg-[#111] border border-gray-700 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-green-500/50 w-52 transition-colors"
+            className="bg-[#111] border border-gray-700 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-green-500/50 w-full sm:w-52 transition-colors"
           />
 
-          {/* Stage filter */}
-          <div className="flex gap-1 bg-[#111] border border-gray-800 rounded-xl p-1">
-            {([['all','All'],['GROUP_STAGE','Group Stage'],['knockout','Knockout']] as [StageFilter,string][]).map(([v,l]) => (
-              <button key={v} onClick={() => { setStageFilter(v); setGroupFilter('all'); }}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
-                  stageFilter === v ? 'bg-green-500 text-black' : 'text-gray-500 hover:text-white'
-                }`}>{l}</button>
-            ))}
-          </div>
+          <div className="flex gap-2 flex-wrap">
+            {/* Stage filter */}
+            <div className="flex gap-1 bg-[#111] border border-gray-800 rounded-xl p-1">
+              {([['all','All'],['GROUP_STAGE','Groups'],['knockout','Knockout']] as [StageFilter,string][]).map(([v,l]) => (
+                <button key={v} onClick={() => { setStageFilter(v); setGroupFilter('all'); }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
+                    stageFilter === v ? 'bg-green-500 text-black' : 'text-gray-500 hover:text-white'
+                  }`}>{l}</button>
+              ))}
+            </div>
 
-          {/* Group filter — only when group stage selected */}
-          {stageFilter !== 'knockout' && (
-            <select
-              value={groupFilter}
-              onChange={(e) => setGroupFilter(e.target.value)}
-              className="bg-[#111] border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500/50 transition-colors"
-            >
-              <option value="all">All Groups</option>
-              {GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
-          )}
+            {/* Group filter */}
+            {stageFilter !== 'knockout' && (
+              <select
+                value={groupFilter}
+                onChange={(e) => setGroupFilter(e.target.value)}
+                className="bg-[#111] border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500/50 transition-colors"
+              >
+                <option value="all">All Groups</option>
+                {GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+            )}
+          </div>
         </div>
 
         {/* Results count */}

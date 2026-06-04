@@ -68,15 +68,14 @@ function TopCard({ entry, order }: { entry: LeaderboardEntry; order: number }) {
       }`}
     >
       {isFirst && <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400 to-transparent" />}
-      <div className="p-5 text-center space-y-2">
-        <div className="text-3xl">{RANK_MEDAL[entry.rank]}</div>
-        <div className="font-bold text-white">{entry.displayName}</div>
-        <div className="text-white/30 text-xs font-mono">{shortAddr(entry.address)}</div>
-        <div className={`text-3xl font-black tabular-nums ${isFirst ? 'text-yellow-400' : 'text-white'}`}>
-          {entry.totalPoints}<span className="text-sm font-normal text-white/40 ml-1">pts</span>
+      <div className="p-3 sm:p-5 text-center space-y-1.5">
+        <div className="text-2xl sm:text-3xl">{RANK_MEDAL[entry.rank]}</div>
+        <div className="font-bold text-white text-xs sm:text-sm leading-tight">{entry.displayName}</div>
+        <div className="text-white/30 text-[10px] font-mono hidden sm:block">{shortAddr(entry.address)}</div>
+        <div className={`text-xl sm:text-3xl font-black tabular-nums ${isFirst ? 'text-yellow-400' : 'text-white'}`}>
+          {entry.totalPoints}<span className="text-xs sm:text-sm font-normal text-white/40 ml-1">pts</span>
         </div>
-        <div className="text-xs text-emerald-400">+{entry.weekPoints} this week</div>
-        <div className="text-xs text-white/30">{entry.formation}</div>
+        <div className="text-[10px] sm:text-xs text-emerald-400">+{entry.weekPoints} wk</div>
       </div>
     </motion.div>
   );
@@ -172,7 +171,7 @@ export default function LeaderboardPage() {
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         {/* Podium — 2nd | 1st | 3rd */}
         {!search && (
-          <div className="grid grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end">
             <TopCard entry={top3[1]} order={1} />
             <TopCard entry={top3[0]} order={0} />
             <TopCard entry={top3[2]} order={2} />

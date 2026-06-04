@@ -163,14 +163,14 @@ export default function SquadPage() {
           <h1 className="text-xl font-black uppercase">Pick Your Squad</h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Formation selector */}
-          <div className="flex gap-1 bg-[#111] border border-gray-800 rounded-xl p-1">
+          <div className="flex flex-wrap gap-1 bg-[#111] border border-gray-800 rounded-xl p-1">
             {FORMATION_OPTIONS.map((f) => (
               <button
                 key={f}
                 onClick={() => { setFormation(f as Formation); setStarters(Array(11).fill(null)); setSelectedSlot(null); }}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
                   formation === f ? 'bg-green-500 text-black' : 'text-gray-500 hover:text-white'
                 }`}
               >
