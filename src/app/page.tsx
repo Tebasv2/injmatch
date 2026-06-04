@@ -50,29 +50,18 @@ export default function HomePage() {
       {/* ══════════ HERO ══════════ */}
       <section ref={heroRef} className="relative min-h-screen flex flex-col justify-center overflow-hidden">
 
-        {/* Dark-grey gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#111] via-[#0d0d0d] to-[#080808]" />
-
-        {/* Trophy image — large, centered-right, dark overlay */}
+        {/* hero-bg.jpg with parallax + left-side dark gradient */}
         <motion.div
           style={{ y: trophyY }}
-          className="absolute right-0 top-0 h-full w-full md:w-[65%] pointer-events-none select-none"
-        >
-          {/* Trophy placeholder — replace src with real trophy image */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent z-10" />
-          <img
-            src="/trophy.png"
-            alt=""
-            className="absolute bottom-0 right-0 h-[95%] w-auto object-contain object-bottom opacity-30"
-            style={{ filter: 'grayscale(30%) brightness(0.7)' }}
-          />
-          {/* Ghosted "PREDICT THE WORLD CUP" text behind trophy */}
-          <div className="absolute inset-0 flex items-center justify-center z-0 overflow-hidden">
-            <p className="text-[clamp(60px,10vw,140px)] font-black uppercase text-white/[0.04] leading-none text-center select-none pointer-events-none whitespace-nowrap">
-              PREDICT THE<br />WORLD CUP
-            </p>
-          </div>
-        </motion.div>
+          className="absolute inset-0 pointer-events-none select-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(10,10,10,0.92) 38%, rgba(10,10,10,0.55) 65%, rgba(10,10,10,0.15) 100%), url(/hero-bg.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center right',
+            y: trophyY,
+          } as any}
+        />
 
         {/* Hero content */}
         <motion.div style={{ opacity: heroOpacity }} className="relative z-20 px-6 md:px-16 max-w-2xl pt-8">
