@@ -67,6 +67,15 @@ pub struct Config {
     pub league_count: u64,
 }
 
+#[cw_serde]
+pub struct SavedSquad {
+    pub owner: String,
+    pub formation: String,
+    pub starter_ids: Vec<String>,  // up to 11 player IDs in slot order
+    pub bench_ids: Vec<String>,    // up to 3 player IDs
+    pub saved_at: u64,
+}
+
 pub const CONFIG: Item<Config> = Item::new("config");
 // league_id -> League
 pub const LEAGUES: Map<&str, League> = Map::new("leagues");
@@ -74,3 +83,5 @@ pub const LEAGUES: Map<&str, League> = Map::new("leagues");
 pub const MATCH_RESULTS: Map<(&str, &str), MatchResult> = Map::new("match_results");
 // (league_id, predictor, match_id) -> Prediction
 pub const PREDICTIONS: Map<(&str, &str, &str), Prediction> = Map::new("predictions");
+// wallet_address -> SavedSquad (one squad per wallet)
+pub const SQUADS: Map<&str, SavedSquad> = Map::new("squads");

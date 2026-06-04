@@ -10,7 +10,7 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{
     Config, League, LeaderboardEntry, LeagueStatus, MatchResult, MatchStage, Prediction,
-    CONFIG, LEAGUES, MATCH_RESULTS, PREDICTIONS,
+    SavedSquad, CONFIG, LEAGUES, MATCH_RESULTS, PREDICTIONS, SQUADS,
 };
 
 const CONTRACT_NAME: &str = "crates.io:injmatch";
@@ -57,6 +57,9 @@ pub fn execute(
         }
         ExecuteMsg::StartLeague { league_id } => execute_start_league(deps, info, league_id),
         ExecuteMsg::FinishLeague { league_id } => execute_finish_league(deps, info, league_id),
+        ExecuteMsg::SaveSquad { formation, starter_ids, bench_ids } => {
+            execute_save_squad(deps, env, info, formation, starter_ids, bench_ids)
+        }
     }
 }
 
@@ -304,6 +307,34 @@ fn execute_finish_league(
         .add_attribute("league_id", league_id))
 }
 
+fn execute_save_squad(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    formation: String,
+    starter_ids: Vec<String>,
+    bench_ids: Vec<String>,
+) -> Result<Response, ContractError> {
+    if starter_ids.len() > 11 {
+        return Err(ContractError::Unauthorized {}); // reuse generic error for now
+    }
+    if bench_ids.len() > 3 {
+        return Err(ContractError::Unauthorized {});
+    }
+    let owner = info.sender.to_string();
+    let squad = SavedSquad {
+        owner: owner.clone(),
+        formation,
+        starter_ids,
+        bench_ids,
+        saved_at: env.block.time.seconds(),
+    };
+    SQUADS.save(deps.storage, &owner, &squad)?;
+    Ok(Response::new()
+        .add_attribute("action", "save_squad")
+        .add_attribute("owner", owner))
+}
+
 fn compute_leaderboard(
     deps: Deps,
     league_id: &str,
@@ -414,6 +445,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let result =
                 MATCH_RESULTS.may_load(deps.storage, (league_id.as_str(), match_id.as_str()))?;
             to_json_binary(&result)
+        }
+        QueryMsg::GetSquad { owner } => {
+            let squad = SQUADS.may_load(deps.storage, &owner)?;
+            to_json_binary(&squad)
         }
     }
 }

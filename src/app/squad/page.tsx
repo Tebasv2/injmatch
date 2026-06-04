@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Pitch } from '@/components/squad/Pitch';
 import { PlayerPool } from '@/components/squad/PlayerPool';
 import { FORMATIONS, SQUAD_BUDGET } from '@/lib/players';
+import { useWalletContext } from '@/components/wallet/WalletProvider';
+import { useSquad } from '@/hooks/useSquad';
 import type { Player, Formation } from '@/types/squad';
 
 const FORMATION_OPTIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1'];
@@ -55,11 +57,16 @@ function BudgetBar({ spent, budget }: { spent: number; budget: number }) {
 }
 
 export default function SquadPage() {
-  const [formation, setFormation] = useState<Formation>('4-3-3');
-  const [starters, setStarters] = useState<(Player | null)[]>(Array(11).fill(null));
-  const [bench, setBench] = useState<(Player | null)[]>(Array(3).fill(null));
+  const { address, isConnected } = useWalletContext();
+  const {
+    starters, setStarters,
+    bench, setBench,
+    formation, setFormation,
+    saveStatus, lastSaved,
+    saveSquad,
+  } = useSquad(address);
+
   const [selectedSlot, setSelectedSlot] = useState<{ type: 'starter' | 'bench'; index: number } | null>(null);
-  const [saved, setSaved] = useState(false);
   const [positionError, setPositionError] = useState<string | null>(null);
   const [budgetError, setBudgetError] = useState<string | null>(null);
 
@@ -141,11 +148,6 @@ export default function SquadPage() {
     }
   }, [selectedSlot, selectedIds, starters, bench, formation, totalSpent]);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
-
   const handleReset = () => {
     setStarters(Array(11).fill(null));
     setBench(Array(3).fill(null));
@@ -167,7 +169,7 @@ export default function SquadPage() {
             {FORMATION_OPTIONS.map((f) => (
               <button
                 key={f}
-                onClick={() => { setFormation(f); setStarters(Array(11).fill(null)); setSelectedSlot(null); }}
+                onClick={() => { setFormation(f as Formation); setStarters(Array(11).fill(null)); setSelectedSlot(null); }}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
                   formation === f ? 'bg-green-500 text-black' : 'text-gray-500 hover:text-white'
                 }`}
@@ -247,28 +249,45 @@ export default function SquadPage() {
                 {totalSelected}/14 players
               </p>
               <p className="text-[10px] text-gray-500">({startersCount} starters + {benchCount} bench)</p>
+              {lastSaved && (
+                <p className="text-[9px] text-gray-600 mt-0.5">
+                  Last saved {lastSaved.toLocaleTimeString()}
+                </p>
+              )}
             </div>
 
             <AnimatePresence mode="wait">
-              {saved ? (
-                <motion.span
-                  key="saved"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-green-400 text-sm font-black uppercase tracking-widest"
-                >
-                  ✓ Saved!
+              {!isConnected ? (
+                <span key="no-wallet" className="text-[10px] text-gray-500 uppercase tracking-widest">
+                  Connect wallet
+                </span>
+              ) : saveStatus === 'saving' ? (
+                <motion.span key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="text-yellow-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                  Saving…
+                </motion.span>
+              ) : saveStatus === 'saved' ? (
+                <motion.span key="saved" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }} className="text-green-400 text-sm font-black uppercase tracking-widest">
+                  ✓ On-chain!
+                </motion.span>
+              ) : saveStatus === 'loading' ? (
+                <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="text-gray-400 text-xs uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                  Loading…
+                </motion.span>
+              ) : saveStatus === 'error' ? (
+                <motion.span key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="text-red-400 text-xs font-bold uppercase tracking-widest">
+                  ✗ Failed
                 </motion.span>
               ) : (
-                <motion.button
-                  key="save"
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={handleSave}
+                <motion.button key="save" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                  onClick={saveSquad}
                   disabled={totalSelected < 11 || totalSpent > SQUAD_BUDGET}
-                  className="bg-green-500 disabled:bg-gray-800 disabled:text-gray-600 text-black font-black uppercase tracking-widest text-xs px-6 py-2.5 rounded-xl transition-colors"
-                >
+                  className="bg-green-500 disabled:bg-gray-800 disabled:text-gray-600 text-black font-black uppercase tracking-widest text-xs px-6 py-2.5 rounded-xl transition-colors">
                   Save Squad
                 </motion.button>
               )}
