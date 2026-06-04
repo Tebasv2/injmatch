@@ -33,36 +33,8 @@ async function main() {
 
   const { SigningCosmWasmClient }  = await import('@cosmjs/cosmwasm-stargate');
   const { DirectSecp256k1Wallet, DirectSecp256k1HdWallet } = await import('@cosmjs/proto-signing');
-  const { GasPrice, accountFromAny } = await import('@cosmjs/stargate');
-  const { BaseAccount } = require('cosmjs-types/cosmos/auth/v1beta1/auth');
-
-  // ── EthAccount parser ────────────────────────────────────────────────────────
-  // Injective uses /injective.types.v1beta1.EthAccount which wraps BaseAccount.
-  function parseEthAccount(anyAccount) {
-    if (anyAccount.typeUrl !== '/injective.types.v1beta1.EthAccount') {
-      return accountFromAny(anyAccount);
-    }
-    const bytes = anyAccount.value;
-    let offset  = 0;
-    if (bytes[offset] !== 0x0a) throw new Error('Unexpected EthAccount bytes');
-    offset++;
-    let len = 0, shift = 0;
-    while (offset < bytes.length) {
-      const b = bytes[offset++];
-      len |= (b & 0x7f) << shift;
-      if (!(b & 0x80)) break;
-      shift += 7;
-    }
-    const base = BaseAccount.decode(bytes.slice(offset, offset + len));
-    return {
-      address:       base.address,
-      pubkey:        base.pubKey
-        ? { type: base.pubKey.typeUrl, value: Buffer.from(base.pubKey.value).toString('base64') }
-        : null,
-      accountNumber: Number(base.accountNumber),
-      sequence:      Number(base.sequence),
-    };
-  }
+  const { GasPrice } = await import('@cosmjs/stargate');
+  // EthAccount support is patched into cosmjs via scripts/patch-cosmjs.cjs
 
   // ── Build signer ──────────────────────────────────────────────────────────────
   let signer;
@@ -83,10 +55,6 @@ async function main() {
     signer,
     { gasPrice: GasPrice.fromString('500000000inj') },
   );
-
-  // Inject our EthAccount parser directly onto the instance
-  // (accountParser is an instance property set in StargateClient constructor)
-  client.accountParser = parseEthAccount;
 
   const balance = await client.getBalance(account.address, 'inj');
   const injBal  = (Number(balance.amount) / 1e18).toFixed(4);
