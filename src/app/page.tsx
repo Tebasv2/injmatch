@@ -29,10 +29,10 @@ function FadeUp({ children, delay = 0, className = '' }: { children: React.React
 }
 
 const FAQS = [
-  { q: 'Which wallet do I need?', a: 'Keplr browser extension. Install it, add the Injective testnet, and hit Connect.' },
+  { q: 'Which wallet do I need?', a: 'Keplr wallet/ browser extension. Install it, add the Injective testnet, and hit Connect.' },
   { q: 'When can I submit predictions?', a: 'Any time before the match kicks off. Once the referee blows the whistle the window closes.' },
-  { q: 'How are prizes distributed?', a: 'Automatically via the smart contract — 60% to first, 30% to second, 10% to third.' },
-  { q: 'Is this on mainnet?', a: 'Currently on Injective testnet (injective-888). Mainnet launch follows a security audit.' },
+  { q: 'How are prizes distributed?', a: 'Automatically via the smart contract' },
+  { q: 'Is this on mainnet?', a: 'Currently on Injective testnet' },
 ];
 
 export default function HomePage() {
@@ -275,7 +275,7 @@ export default function HomePage() {
             Ready to <span className="text-green-400">compete?</span>
           </h2>
           <p className="text-gray-500 mb-10 text-base">
-            Join a league, predict every game, win INJ — all on-chain.
+            Predict every game, win INJ — all on-chain.
           </p>
           <motion.button
             whileHover={{ scale: 1.04, backgroundColor: '#16a34a' }}

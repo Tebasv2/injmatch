@@ -65,7 +65,7 @@ export function PrizeSplit() {
               <span className="text-white font-black text-lg tracking-wide">INJ</span>
             </div>
             <p className="text-gray-500 text-xs leading-relaxed">
-              The pool grows with every squad registered. Splits below update live as entries come in.
+               Splits below update live as entries come in.
             </p>
           </div>
           <p className="text-[8px] text-green-400/70 uppercase tracking-[0.15em] leading-relaxed mt-6 font-bold">
