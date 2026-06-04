@@ -1,0 +1,29 @@
+name: Score finished WC2026 matches
+
+on:
+  schedule:
+    # Every 15 minutes during typical match hours (14:00–23:59 UTC)
+    # GitHub Actions minimum is 5 min; 15 min keeps API usage low
+    - cron: '*/15 14-23 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping cron endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/check-matches")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Cron endpoint returned $STATUS" && exit 1
+          fi
+
+      - name: Print response
+        run: |
+          curl -s \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/check-matches" | \
+            python3 -m json.tool || true
