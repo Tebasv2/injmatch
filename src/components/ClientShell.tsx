@@ -3,6 +3,8 @@
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 const WalletProvider = dynamic(
   () => import('@/components/wallet/WalletProvider').then((m) => m.WalletProvider),
@@ -15,11 +17,38 @@ const WalletButton = dynamic(
 );
 
 const NAV = [
-  { label: 'World Cup', active: true, soon: false },
-  { label: 'Fixtures', active: false, soon: false },
-  { label: 'Leaderboard', active: false, soon: true },
-  { label: 'FAQ', active: false, soon: false },
+  { label: 'World Cup', href: '/', soon: false },
+  { label: 'Fixtures',  href: '/fixtures', soon: false },
+  { label: 'Squad',     href: '/squad', soon: false },
+  { label: 'Leaderboard', href: '/leaderboard', soon: true },
 ];
+
+function NavLinks() {
+  const pathname = usePathname();
+  return (
+    <nav className="hidden lg:flex items-center gap-1">
+      {NAV.map((item) => {
+        const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+        return (
+          <Link
+            key={item.label}
+            href={item.soon ? '#' : item.href}
+            className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
+              active ? 'text-green-400' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            {item.label}
+            {item.soon && (
+              <span className="absolute -top-2 -right-1 bg-green-500 text-black text-[8px] font-black uppercase px-1 py-0.5 rounded leading-none">
+                Soon
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<'EN' | 'UA'>('EN');
@@ -48,26 +77,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
           </a>
 
           {/* ── Nav links ── */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {NAV.map((item) => (
-              <a
-                key={item.label}
-                href="#"
-                className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
-                  item.active
-                    ? 'text-green-400'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {item.label}
-                {item.soon && (
-                  <span className="absolute -top-2 -right-1 bg-green-500 text-black text-[8px] font-black uppercase px-1 py-0.5 rounded leading-none">
-                    Soon
-                  </span>
-                )}
-              </a>
-            ))}
-          </nav>
+          <NavLinks />
 
           {/* ── Right side controls ── */}
           <div className="flex items-center gap-3 flex-shrink-0">
