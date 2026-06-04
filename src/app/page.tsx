@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   motion,
   useScroll,
@@ -37,6 +38,7 @@ const FAQS = [
 
 export default function HomePage() {
   const { isConnected } = useWalletContext();
+  const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -134,7 +136,7 @@ export default function HomePage() {
             <motion.button
               whileHover={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => isConnected && setShowCreate(true)}
+              onClick={() => router.push('/squad')}
               className="inline-flex items-center gap-3 border-2 border-white text-white font-black uppercase tracking-[0.18em] px-8 py-4 rounded-full text-sm transition-colors"
             >
               START COMPETING <span className="text-base">→</span>
@@ -280,7 +282,7 @@ export default function HomePage() {
           <motion.button
             whileHover={{ scale: 1.04, backgroundColor: '#16a34a' }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => isConnected && setShowCreate(true)}
+            onClick={() => router.push('/squad')}
             className="inline-flex items-center gap-3 bg-green-500 text-black font-black uppercase tracking-[0.2em] px-10 py-5 rounded-full text-sm transition-colors"
           >
             START COMPETING →
