@@ -10,6 +10,7 @@ import {
 } from 'framer-motion';
 import { CreateLeagueModal } from '@/components/league/CreateLeagueModal';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
+import { PrizeSplit } from '@/components/PrizeSplit';
 
 function FadeUp({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
   const ref = useRef(null);
@@ -256,34 +257,7 @@ export default function HomePage() {
       </section>
 
       {/* ══════════ PRIZES ══════════ */}
-      <section className="py-20 px-6 md:px-16 bg-[#0a0a0a] border-t border-gray-800/50">
-        <FadeUp className="max-w-4xl mx-auto">
-          <p className="text-green-400 text-xs font-bold uppercase tracking-[0.3em] mb-2">Prizes</p>
-          <h2 className="text-4xl md:text-5xl font-black uppercase mb-12">Prize Split</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { place: '🥇', pos: '1st', pct: '60%', border: 'border-yellow-400/40' },
-              { place: '🥈', pos: '2nd', pct: '30%', border: 'border-gray-400/40' },
-              { place: '🥉', pos: '3rd', pct: '10%', border: 'border-amber-700/40' },
-            ].map((p, i) => (
-              <motion.div
-                key={p.pos}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.12 }}
-                whileHover={{ scale: 1.03 }}
-                className={`border-2 ${p.border} bg-[#141414] rounded-2xl p-8 text-center`}
-              >
-                <p className="text-4xl mb-3">{p.place}</p>
-                <p className="text-white font-black text-lg uppercase mb-1">{p.pos} Place</p>
-                <p className="text-green-400 font-black text-4xl" style={{ textShadow: '0 0 20px rgba(74,222,128,0.4)' }}>{p.pct}</p>
-                <p className="text-gray-600 text-[10px] mt-1 uppercase tracking-widest">of prize pool</p>
-              </motion.div>
-            ))}
-          </div>
-        </FadeUp>
-      </section>
+      <PrizeSplit />
 
       {/* ══════════ FAQ ══════════ */}
       <section className="py-20 px-6 md:px-16 bg-[#0d0d0d] border-t border-gray-800/50">
