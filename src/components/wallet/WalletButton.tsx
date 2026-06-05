@@ -13,7 +13,7 @@ export function WalletButton() {
         {/* Balance chip */}
         <div className="hidden sm:flex flex-col text-right">
           <span className="text-[9px] text-gray-500 uppercase tracking-widest">Balance</span>
-          <span className="text-xs font-bold text-green-400">{balance} INJ</span>
+          <span className="text-xs font-bold text-blue-400">{balance} INJ</span>
         </div>
 
         {/* Address chip */}
@@ -44,7 +44,7 @@ export function WalletButton() {
         whileTap={{ scale: 0.96 }}
         onClick={() => connect('keplr')}
         disabled={isConnecting}
-        className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-black font-black uppercase tracking-widest text-xs px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+        className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-black font-black uppercase tracking-widest text-xs px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
       >
         {isConnecting ? 'Connecting…' : 'Connect Wallet'}
       </motion.button>
