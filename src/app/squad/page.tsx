@@ -68,6 +68,8 @@ export default function SquadPage() {
     starters, setStarters,
     bench, setBench,
     formation, setFormation,
+    captainId, setCaptainId,
+    viceCaptainId, setViceCaptainId,
     saveStatus, lastSaved,
     saveSquad,
   } = useSquad(address);
@@ -76,8 +78,6 @@ export default function SquadPage() {
   const [positionError, setPositionError] = useState<string | null>(null);
   const [budgetError, setBudgetError] = useState<string | null>(null);
   const [transferWindow, setTransferWindow] = useState<TransferWindowState | null>(null);
-  const [captainId, setCaptainId] = useState<string | null>(null);
-  const [viceCaptainId, setViceCaptainId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/transfer-window')
