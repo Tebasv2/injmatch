@@ -7,6 +7,7 @@ import { PlayerPool } from '@/components/squad/PlayerPool';
 import { FORMATIONS, SQUAD_BUDGET } from '@/lib/players';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { useSquad } from '@/hooks/useSquad';
+import { useNFTBoost } from '@/hooks/useNFTBoost';
 import type { Player, Formation } from '@/types/squad';
 
 interface TransferWindowState {
@@ -73,6 +74,8 @@ export default function SquadPage() {
     saveStatus, lastSaved,
     saveSquad,
   } = useSquad(address);
+
+  const hasBoost = useNFTBoost(address);
 
   const [selectedSlot, setSelectedSlot] = useState<{ type: 'starter' | 'bench'; index: number } | null>(null);
   const [positionError, setPositionError] = useState<string | null>(null);
@@ -246,6 +249,14 @@ export default function SquadPage() {
 
           {/* Budget bar */}
           <BudgetBar spent={totalSpent} budget={SQUAD_BUDGET} />
+
+          {/* NFT Boost badge */}
+          {hasBoost && (
+            <div className="flex items-center gap-2 bg-[#111] border border-blue-500/30 rounded-2xl px-4 py-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Boost Active</span>
+            </div>
+          )}
 
           {/* Captain / Vice-Captain picker */}
           {starters.some(Boolean) && (
