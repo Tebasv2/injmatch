@@ -70,7 +70,7 @@ async function main() {
   console.log(`📦  Uploading WASM (${(wasm.length/1024).toFixed(1)} KB)...`);
   const uploadFee = {
     amount: [{ denom: 'inj', amount: '50000000000000000' }], // 0.05 INJ
-    gas: '100000000', // 100M gas for ~260KB WASM
+    gas: '75000000', // 75M gas (Injective testnet max)
   };
   const uploadResult = await client.upload(account.address, wasm, uploadFee);
   console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
