@@ -50,10 +50,7 @@ async function findAFFixtureId(
   const res = await fetch(
     `${AF_BASE}/fixtures?date=${date}&league=1&season=2026`,
     {
-      headers: {
-        'x-rapidapi-host': 'v3.football.api-sports.io',
-        'x-rapidapi-key': AF_KEY,
-      },
+      headers: { 'x-apisports-key': AF_KEY },
     },
   );
   if (!res.ok) return null;
@@ -77,10 +74,7 @@ async function findAFFixtureId(
 
 async function scoreFixture(afFixtureId: number, score: { home: number; away: number }) {
   const res = await fetch(`${AF_BASE}/fixtures/players?fixture=${afFixtureId}`, {
-    headers: {
-      'x-rapidapi-host': 'v3.football.api-sports.io',
-      'x-rapidapi-key': AF_KEY!,
-    },
+    headers: { 'x-apisports-key': AF_KEY! },
   });
   if (!res.ok) return null;
   const raw = await res.json();
