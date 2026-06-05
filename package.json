@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "jest",
     "contract:build": "cd contracts && cargo build --release --target wasm32-unknown-unknown && wasm-opt -Os target/wasm32-unknown-unknown/release/injmatch.wasm -o artifacts/injmatch.wasm && cd .. && python3 scripts/lower-bulk-memory.py contracts/artifacts/injmatch.wasm contracts/artifacts/injmatch_lowered.wasm",
-    "contract:deploy": "node scripts/deploy.mjs",
+    "contract:deploy": "node scripts/patch-cosmjs.cjs && node scripts/deploy.mjs",
     "contract:test": "node scripts/test-squad.mjs",
     "postinstall": "node scripts/patch-cosmjs.cjs",
     "contract:lower": "python3 scripts/lower-bulk-memory.py contracts/artifacts/injmatch.wasm contracts/artifacts/injmatch_lowered.wasm"

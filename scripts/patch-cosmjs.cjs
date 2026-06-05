@@ -1,7 +1,8 @@
 /**
  * Patches @cosmjs to support Injective:
  *  1. accountFromAny: adds EthAccount type support
- *  2. fromBase64: Injective RPC returns unpadded base64 — adds padding before decode
+ *  2. fromBase64: Injective RPC returns unpadded/url-safe base64 — adds padding/normalization
+ *  3. responses.js: replaces all fromBase64 calls with a safe decoder that never throws
  */
 
 const fs   = require('fs');
@@ -73,5 +74,48 @@ for (const BASE64_FILE of BASE64_FILES) {
   } else {
     fs.writeFileSync(BASE64_FILE, patched, 'utf8');
     console.log(`[patch-cosmjs] fromBase64 patch: applied to ${BASE64_FILE.split('node_modules/')[1]}`);
+  }
+}
+
+// ── Patch 3: responses.js safe decoder ──────────────────────────────────────
+// Replace ALL fromBase64 calls in Tendermint RPC response decoders with a
+// safe version that never throws — Injective returns non-standard data fields.
+
+const SAFE_DECODER = `// injective_fix: safe base64 decode that handles unpadded/url-safe base64
+function safeFromBase64(s) {
+    if (!s) return new Uint8Array(0);
+    try {
+        s = s.replace(/-/g, '+').replace(/_/g, '/');
+        while (s.length % 4 !== 0) s += '=';
+        return (0, encoding_1.fromBase64)(s);
+    } catch(e) {
+        return Buffer.from(s, 'base64');
+    }
+}
+`;
+
+const RESPONSES_FILES = [
+  '../node_modules/@cosmjs/cosmwasm-stargate/node_modules/@cosmjs/tendermint-rpc/build/comet38/adaptor/responses.js',
+  '../node_modules/@cosmjs/tendermint-rpc/build/comet38/adaptor/responses.js',
+  '../node_modules/@cosmjs/tendermint-rpc/build/comet1/adaptor/responses.js',
+].map(p => path.join(__dirname, p));
+
+for (const RESP_FILE of RESPONSES_FILES) {
+  if (!fs.existsSync(RESP_FILE)) continue;
+  const content = fs.readFileSync(RESP_FILE, 'utf8');
+  if (content.includes('injective_fix')) {
+    console.log(`[patch-cosmjs] responses patch: already applied (${RESP_FILE.split('node_modules/')[1].split('/')[0]})`);
+    continue;
+  }
+  let patched = content.replace(
+    'const encoding_1 = require("@cosmjs/encoding");',
+    'const encoding_1 = require("@cosmjs/encoding");\n' + SAFE_DECODER,
+  );
+  patched = patched.replace(/\(0, encoding_1\.fromBase64\)/g, 'safeFromBase64');
+  if (patched === content) {
+    console.warn(`[patch-cosmjs] responses patch: pattern not found in ${RESP_FILE}`);
+  } else {
+    fs.writeFileSync(RESP_FILE, patched, 'utf8');
+    console.log(`[patch-cosmjs] responses patch: applied to ${RESP_FILE.split('node_modules/')[1]}`);
   }
 }
