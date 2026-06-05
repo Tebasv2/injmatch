@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import type { ScoredPlayer } from '@/types/scoring';
 
@@ -228,6 +228,81 @@ function MatchScorer() {
   );
 }
 
+// ─── Transfer window card ──────────────────────────────────────────────────────
+
+function TransferWindowCard() {
+  const [status, setStatus] = useState<{ open: boolean; round: number | null; reason: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function refresh() {
+    const res = await fetch('/api/transfer-window');
+    const data = await res.json();
+    setStatus(data);
+  }
+
+  useEffect(() => { refresh(); }, []);
+
+  async function setOverride(value: 'open' | 'closed' | 'auto') {
+    setLoading(true);
+    try {
+      await fetch('/api/transfer-window', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-cron-secret': process.env.NEXT_PUBLIC_CRON_SECRET ?? '',
+        },
+        body: JSON.stringify({ override: value }),
+      });
+      await refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white/4 border border-white/10 rounded-2xl p-5 space-y-4">
+      <h2 className="font-bold text-white text-sm uppercase tracking-wide">Transfer Window</h2>
+      <div className="flex items-center gap-3">
+        <span className={`text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-widest border ${
+          status === null
+            ? 'border-white/10 text-white/30 bg-white/5'
+            : status.open
+              ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
+              : 'border-red-500/30 text-red-400 bg-red-500/10'
+        }`}>
+          {status === null ? 'Loading…' : status.open ? 'Open' : 'Closed'}
+        </span>
+        {status && (
+          <span className="text-xs text-white/40">{status.reason}</span>
+        )}
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setOverride('open')}
+          disabled={loading}
+          className="px-4 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wide disabled:opacity-40 transition-colors"
+        >
+          Force Open
+        </button>
+        <button
+          onClick={() => setOverride('closed')}
+          disabled={loading}
+          className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 text-xs font-bold uppercase tracking-wide disabled:opacity-40 transition-colors"
+        >
+          Force Close
+        </button>
+        <button
+          onClick={() => setOverride('auto')}
+          disabled={loading}
+          className="px-4 py-2 rounded-lg bg-white/8 hover:bg-white/12 border border-white/10 text-white/60 text-xs font-bold uppercase tracking-wide disabled:opacity-40 transition-colors"
+        >
+          Auto
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Stats overview cards ──────────────────────────────────────────────────────
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -270,6 +345,9 @@ export default function AdminPage() {
           <StatCard label="API Calls Left"  value="100"  sub="Today (free tier)" />
           <StatCard label="Last Cron"       value="—"    sub="Never run" />
         </div>
+
+        {/* Transfer window */}
+        <TransferWindowCard />
 
         {/* Match scorer */}
         <MatchScorer />

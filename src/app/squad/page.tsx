@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pitch } from '@/components/squad/Pitch';
 import { PlayerPool } from '@/components/squad/PlayerPool';
@@ -8,6 +8,12 @@ import { FORMATIONS, SQUAD_BUDGET } from '@/lib/players';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { useSquad } from '@/hooks/useSquad';
 import type { Player, Formation } from '@/types/squad';
+
+interface TransferWindowState {
+  open: boolean;
+  round: number | null;
+  reason: string;
+}
 
 const FORMATION_OPTIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1'];
 
@@ -69,6 +75,16 @@ export default function SquadPage() {
   const [selectedSlot, setSelectedSlot] = useState<{ type: 'starter' | 'bench'; index: number } | null>(null);
   const [positionError, setPositionError] = useState<string | null>(null);
   const [budgetError, setBudgetError] = useState<string | null>(null);
+  const [transferWindow, setTransferWindow] = useState<TransferWindowState | null>(null);
+
+  useEffect(() => {
+    fetch('/api/transfer-window')
+      .then((r) => r.json())
+      .then((d) => setTransferWindow(d))
+      .catch(() => setTransferWindow({ open: true, round: null, reason: '' }));
+  }, []);
+
+  const windowLocked = transferWindow !== null && !transferWindow.open;
 
   const allPlayers = useMemo(() => [
     ...starters.filter(Boolean) as Player[],
@@ -156,6 +172,19 @@ export default function SquadPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {windowLocked && transferWindow && (
+        <div className="bg-red-500/10 border-b border-red-500/30 px-4 md:px-8 py-3 flex items-start gap-3">
+          <span className="text-lg leading-none mt-0.5">🔒</span>
+          <div>
+            <p className="text-red-400 font-black text-sm uppercase tracking-widest">Squad editing is locked</p>
+            <p className="text-red-400/70 text-xs mt-0.5">
+              {transferWindow.round !== null
+                ? `Round ${transferWindow.round} is in progress. The transfer window opens once all Round ${transferWindow.round} matches finish.`
+                : transferWindow.reason}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Page header */}
       <div className="border-b border-gray-800 px-4 md:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -283,6 +312,11 @@ export default function SquadPage() {
                   className="text-red-400 text-xs font-bold uppercase tracking-widest">
                   ✗ Failed
                 </motion.span>
+              ) : windowLocked ? (
+                <motion.button key="locked" disabled
+                  className="bg-gray-800 text-gray-600 font-black uppercase tracking-widest text-xs px-6 py-2.5 rounded-xl cursor-not-allowed flex items-center gap-2">
+                  <span>🔒</span> Locked
+                </motion.button>
               ) : (
                 <motion.button key="save" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                   onClick={saveSquad}
