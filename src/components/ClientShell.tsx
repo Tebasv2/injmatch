@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useWalletContext } from '@/components/wallet/WalletProvider';
+import { useWalletContext, useWalletContextSafe } from '@/components/wallet/WalletProvider';
 
 const WalletProvider = dynamic(
   () => import('@/components/wallet/WalletProvider').then((m) => m.WalletProvider),
@@ -31,8 +31,9 @@ const NAV = [
 
 function NavLinks({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
-  const { address } = useWalletContext();
-  const isAdmin = ADMIN_ADDRESS && address === ADMIN_ADDRESS;
+  const ctx = useWalletContextSafe();
+  const address = ctx?.address ?? null;
+  const isAdmin = !!(ADMIN_ADDRESS && address && address === ADMIN_ADDRESS);
 
   const links = NAV.filter(item => !item.adminOnly || isAdmin);
 
