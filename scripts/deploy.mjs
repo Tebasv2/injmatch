@@ -14,6 +14,7 @@ import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { gzipSync } from 'zlib';
 
 const require = createRequire(import.meta.url);
 const __dir   = dirname(fileURLToPath(import.meta.url));
@@ -66,8 +67,9 @@ async function main() {
   }
 
   // ── Upload WASM ───────────────────────────────────────────────────────────────
-  const wasm = readFileSync(join(__dir, '../contracts/artifacts/injmatch_lowered.wasm'));
-  console.log('📦  Uploading WASM...');
+  const wasmRaw = readFileSync(join(__dir, '../contracts/artifacts/injmatch_lowered.wasm'));
+  const wasm = gzipSync(wasmRaw, { level: 9 });
+  console.log(`📦  Uploading WASM (${(wasmRaw.length/1024).toFixed(1)} KB raw → ${(wasm.length/1024).toFixed(1)} KB gzipped)...`);
   const uploadResult = await client.upload(account.address, wasm, 'auto');
   console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
   console.log(`   TX: ${uploadResult.transactionHash}\n`);
