@@ -21,6 +21,7 @@ const NAV = [
   { label: 'Fixtures',    href: '/fixtures',    soon: false },
   { label: 'Squad',       href: '/squad',       soon: false },
   { label: 'Leaderboard', href: '/leaderboard', soon: false },
+  { label: 'FAQ',         href: '/faq',         soon: false },
 ];
 
 function NavLinks({ onClose }: { onClose?: () => void }) {
