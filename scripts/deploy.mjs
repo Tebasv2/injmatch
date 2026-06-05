@@ -149,26 +149,81 @@ async function main() {
 
   // ── Instantiate ───────────────────────────────────────────────────────────────
   console.log('🚀  Instantiating contract...');
+  const { MsgInstantiateContract } = require('cosmjs-types/cosmwasm/wasm/v1/tx');
+
   const instantiateFee = {
-    amount: [{ denom: 'inj', amount: '5000000000000000' }], // 0.005 INJ
-    gas: '10000000', // 10M gas for instantiate
+    amount: [{ denom: 'inj', amount: '5000000000000000' }],
+    gas: '10000000',
   };
-  const instantiateResult = await client.instantiate(
-    account.address,
-    Number(codeId),
-    {},
-    'InjMatch v1',
-    instantiateFee,
-    { admin: account.address },
-  );
+  const instMsg = {
+    typeUrl: '/cosmwasm.wasm.v1.MsgInstantiateContract',
+    value: MsgInstantiateContract.fromPartial({
+      sender: account.address,
+      admin:  account.address,
+      codeId: BigInt(codeId),
+      label:  'InjMatch v1',
+      msg:    Buffer.from('{}'),
+      funds:  [],
+    }),
+  };
+  const instTxResult = await client.signAndBroadcast(account.address, [instMsg], instantiateFee);
+  console.log(`   TX: ${instTxResult.transactionHash}`);
+
+  // Query LCD for the contract address
+  let contractAddress = null;
+  for (let attempt = 0; attempt < 5 && !contractAddress; attempt++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const res  = await fetch(`${LCD}/cosmos/tx/v1beta1/txs/${instTxResult.transactionHash}`);
+      const json = await res.json();
+      const logs = json?.tx_response?.logs ?? [];
+      for (const log of logs) {
+        for (const ev of (log.events ?? [])) {
+          for (const attr of (ev.attributes ?? [])) {
+            if (attr.key === '_contract_address' || attr.key === 'contract_address') {
+              contractAddress = attr.value; break;
+            }
+          }
+          if (contractAddress) break;
+        }
+        if (contractAddress) break;
+      }
+      // check top-level events too
+      if (!contractAddress) {
+        for (const ev of (json?.tx_response?.events ?? [])) {
+          for (const attr of (ev.attributes ?? [])) {
+            if (attr.key === '_contract_address' || attr.key === 'contract_address') {
+              contractAddress = attr.value; break;
+            }
+          }
+          if (contractAddress) break;
+        }
+      }
+      if (contractAddress) break;
+    } catch(e) { /* retry */ }
+  }
+
+  if (!contractAddress) {
+    // Last resort: query contracts by code_id
+    try {
+      const res  = await fetch(`${LCD}/cosmwasm/wasm/v1/contract/by_code/${codeId}`);
+      const json = await res.json();
+      contractAddress = json?.contracts?.[0];
+    } catch(e) {}
+  }
+
+  if (!contractAddress) {
+    console.error('❌  Could not get contract address. TX was:', instTxResult.transactionHash);
+    process.exit(1);
+  }
 
   console.log(`\n✅  Contract deployed!\n`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`CONTRACT ADDRESS:\n${instantiateResult.contractAddress}`);
+  console.log(`CONTRACT ADDRESS:\n${contractAddress}`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`\nAdd to .env.local and Vercel env vars:`);
-  console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${instantiateResult.contractAddress}`);
-  console.log(`\nTX: ${instantiateResult.transactionHash}`);
+  console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}`);
+  console.log(`\nTX: ${instTxResult.transactionHash}`);
 }
 
 main().catch(err => {
