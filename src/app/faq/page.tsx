@@ -65,11 +65,11 @@ const CATEGORIES: FAQCategory[] = [
     items: [
       {
         q: 'How many players do I pick?',
-        a: 'You select 15 players in total: 11 starters and 4 bench players. Your starters score points each gameweek; bench players provide cover if a starter does not play.',
+        a: 'You select 14 players in total: 11 starters and 3 bench players. Your starters score points each gameweek; bench players provide cover if a starter does not play.',
       },
       {
         q: 'Is there a budget limit?',
-        a: 'Yes. You have a budget of 100◈ (credits) to spend across all 15 players. Each player has a price based on their expected World Cup impact — balance star players with budget options.',
+        a: 'Yes. You have a budget of 100 $INJ to spend across all 15 players. Each player has a price based on their expected World Cup impact — balance star players with budget options.',
       },
       {
         q: 'What formations are available?',
@@ -161,7 +161,7 @@ const CATEGORIES: FAQCategory[] = [
       },
       {
         q: 'How do I report a bug or get help?',
-        a: 'Join our community channels (Discord / Telegram) and post in the support section. Include your wallet address and a description of the issue so the team can investigate.',
+        a: 'Tag @tebasv2 on X, Include your wallet address and a description of the issue so the team can investigate.',
       },
     ],
   },
