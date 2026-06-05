@@ -179,7 +179,7 @@ export default function SquadPage() {
           <p className="text-gray-400 text-sm max-w-xs">You need to connect your Keplr wallet to view and manage your squad.</p>
         </div>
       )}
-      {isConnected && (
+      {isConnected && windowLocked && transferWindow && (
         <div className="bg-red-500/10 border-b border-red-500/30 px-4 md:px-8 py-3 flex items-start gap-3">
           <span className="text-lg leading-none mt-0.5">🔒</span>
           <div>
@@ -395,7 +395,6 @@ export default function SquadPage() {
           />
         </div>
       </div>
-      )}
     </div>
   );
 }
