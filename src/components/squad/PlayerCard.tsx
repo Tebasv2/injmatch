@@ -19,22 +19,37 @@ interface PitchCardProps {
   slotIndex: number;
   positionHint: 'GK' | 'DEF' | 'MID' | 'FWD';
   isSelected?: boolean;
+  isCaptain?: boolean;
+  isViceCaptain?: boolean;
   onClick: () => void;
 }
 
-export function PitchCard({ player, positionHint, isSelected, onClick }: PitchCardProps) {
+export function PitchCard({ player, positionHint, isSelected, isCaptain, isViceCaptain, onClick }: PitchCardProps) {
   return (
     <motion.button
       whileHover={{ scale: 1.07 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="flex flex-col items-center gap-1 group focus:outline-none"
+      className="flex flex-col items-center gap-1 group focus:outline-none relative"
     >
+      {/* Captain / VC badge */}
+      {(isCaptain || isViceCaptain) && (
+        <span className={`absolute -top-1 -right-1 z-10 text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full leading-none ${
+          isCaptain ? 'bg-yellow-400 text-black' : 'bg-white/80 text-black'
+        }`}>
+          {isCaptain ? 'C' : 'V'}
+        </span>
+      )}
+
       {/* Avatar circle */}
       <div
         className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-black border-2 transition-all overflow-hidden ${
           isSelected
             ? 'border-green-400 shadow-[0_0_12px_rgba(74,222,128,0.4)]'
+            : isCaptain
+            ? 'border-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.35)]'
+            : isViceCaptain
+            ? 'border-white/60'
             : player
             ? 'border-gray-600 group-hover:border-green-400/60'
             : 'border-dashed border-gray-600 bg-[#111] group-hover:border-green-400/40'

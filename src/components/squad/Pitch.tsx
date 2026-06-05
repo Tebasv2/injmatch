@@ -9,9 +9,11 @@ interface Props {
   starters: (Player | null)[];
   selectedSlot: number | null;
   onSlotClick: (index: number) => void;
+  captainId?: string | null;
+  viceCaptainId?: string | null;
 }
 
-export function Pitch({ formation, starters, selectedSlot, onSlotClick }: Props) {
+export function Pitch({ formation, starters, selectedSlot, onSlotClick, captainId, viceCaptainId }: Props) {
   const rows = FORMATIONS[formation]?.rows ?? FORMATIONS['4-3-3'].rows;
 
   // Build slot indices per row (top = attack, bottom = GK)
@@ -64,6 +66,8 @@ export function Pitch({ formation, starters, selectedSlot, onSlotClick }: Props)
                 player={starters[slotIndex]}
                 positionHint={positionHint}
                 isSelected={selectedSlot === slotIndex}
+                isCaptain={!!(captainId && starters[slotIndex]?.id === captainId)}
+                isViceCaptain={!!(viceCaptainId && starters[slotIndex]?.id === viceCaptainId)}
                 onClick={() => onSlotClick(slotIndex)}
               />
             ))}
