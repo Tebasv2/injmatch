@@ -77,15 +77,49 @@ async function main() {
   }
 
   // ── Upload WASM ───────────────────────────────────────────────────────────────
-  const wasm = readFileSync(join(__dir, '../contracts/artifacts/injmatch_lowered.wasm'));
-  console.log(`📦  Uploading WASM (${(wasm.length/1024).toFixed(1)} KB)...`);
+  const pako      = require('pako');
+  const { MsgStoreCode } = require('cosmjs-types/cosmwasm/wasm/v1/tx');
+
+  const wasm       = readFileSync(join(__dir, '../contracts/artifacts/injmatch_lowered.wasm'));
+  const compressed = pako.gzip(wasm, { level: 9 });
+  console.log(`📦  Uploading WASM (${(wasm.length/1024).toFixed(1)} KB raw → ${(compressed.length/1024).toFixed(1)} KB gzipped)...`);
+
   const uploadFee = {
-    amount: [{ denom: 'inj', amount: '50000000000000000' }], // 0.05 INJ
-    gas: '75000000', // 75M gas (Injective testnet max)
+    amount: [{ denom: 'inj', amount: '50000000000000000' }],
+    gas: '75000000',
   };
-  const uploadResult = await client.upload(account.address, wasm, uploadFee);
-  console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
-  console.log(`   TX: ${uploadResult.transactionHash}\n`);
+  const storeMsg = {
+    typeUrl: '/cosmwasm.wasm.v1.MsgStoreCode',
+    value: MsgStoreCode.fromPartial({ sender: account.address, wasmByteCode: compressed }),
+  };
+  const uploadTxResult = await client.signAndBroadcast(account.address, [storeMsg], uploadFee);
+  console.log(`   TX: ${uploadTxResult.transactionHash}`);
+  console.log(`   Raw log: ${uploadTxResult.rawLog?.slice(0, 200)}`);
+
+  // Print all events to debug Injective's response format
+  console.log('   Events:');
+  for (const ev of (uploadTxResult.events || [])) {
+    console.log(`     [${ev.type}]`, ev.attributes?.map(a => `${a.key}=${a.value}`).join(', '));
+  }
+
+  // Extract code_id — Injective may use 'store_code', 'cosmwasm.wasm.v1.EventCodeStored', or rawLog
+  let codeId = null;
+  for (const ev of (uploadTxResult.events || [])) {
+    for (const attr of (ev.attributes || [])) {
+      if (attr.key === 'code_id') { codeId = attr.value; break; }
+    }
+    if (codeId) break;
+  }
+  // Fallback: parse rawLog
+  if (!codeId && uploadTxResult.rawLog) {
+    const m = uploadTxResult.rawLog.match(/"code_id","value":"(\d+)"|code_id[^\d]*(\d+)/);
+    if (m) codeId = m[1] || m[2];
+  }
+  if (!codeId) {
+    console.error('❌  Could not extract code_id. Check Events above to find the right attribute name.');
+    process.exit(1);
+  }
+  console.log(`✅  Code uploaded! code_id = ${codeId}\n`);
 
   // ── Instantiate ───────────────────────────────────────────────────────────────
   console.log('🚀  Instantiating contract...');
@@ -95,7 +129,7 @@ async function main() {
   };
   const instantiateResult = await client.instantiate(
     account.address,
-    uploadResult.codeId,
+    Number(codeId),
     {},
     'InjMatch v1',
     instantiateFee,
