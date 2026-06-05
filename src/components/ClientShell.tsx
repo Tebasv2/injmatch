@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useWalletContext } from '@/components/wallet/WalletProvider';
 
 const WalletProvider = dynamic(
   () => import('@/components/wallet/WalletProvider').then((m) => m.WalletProvider),
@@ -16,19 +17,29 @@ const WalletButton = dynamic(
   { ssr: false },
 );
 
+const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS ?? '';
+
 const NAV = [
   { label: 'World Cup',   href: '/',            soon: false },
   { label: 'Fixtures',    href: '/fixtures',    soon: false },
   { label: 'Squad',       href: '/squad',       soon: false },
   { label: 'Leaderboard', href: '/leaderboard', soon: false },
+  { label: 'Scores',      href: '/scores',      soon: false },
   { label: 'FAQ',         href: '/faq',         soon: false },
 ];
 
 function NavLinks({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const { address } = useWalletContext();
+  const isAdmin = ADMIN_ADDRESS && address === ADMIN_ADDRESS;
+
+  const links = isAdmin
+    ? [...NAV, { label: 'Admin', href: '/admin', soon: false }]
+    : NAV;
+
   return (
     <>
-      {NAV.map((item) => {
+      {links.map((item) => {
         const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
         return (
           <Link
@@ -36,7 +47,9 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
             href={item.soon ? '#' : item.href}
             onClick={onClose}
             className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
-              active ? 'text-green-400' : 'text-gray-400 hover:text-white'
+              item.label === 'Admin'
+                ? active ? 'text-yellow-300' : 'text-yellow-500/70 hover:text-yellow-300'
+                : active ? 'text-green-400' : 'text-gray-400 hover:text-white'
             }`}
           >
             {item.label}
@@ -51,6 +64,7 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
     </>
   );
 }
+
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const [lang, setLang]       = useState<'EN' | 'UA'>('EN');
