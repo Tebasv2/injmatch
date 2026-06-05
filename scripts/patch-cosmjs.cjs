@@ -81,6 +81,7 @@ for (const BASE64_FILE of BASE64_FILES) {
 // Replace ALL fromBase64 calls in Tendermint RPC response decoders with a
 // safe version that never throws — Injective returns non-standard data fields.
 
+// NOTE: must call encoding_1.fromBase64 (NOT safeFromBase64) to avoid infinite recursion
 const SAFE_DECODER = `// injective_fix: safe base64 decode that handles unpadded/url-safe base64
 function safeFromBase64(s) {
     if (!s) return new Uint8Array(0);
@@ -105,8 +106,15 @@ const RESPONSES_FILES = [
 for (const RESP_FILE of RESPONSES_FILES) {
   if (!fs.existsSync(RESP_FILE)) continue;
   const content = fs.readFileSync(RESP_FILE, 'utf8');
-  if (content.includes('injective_fix')) {
+  if (content.includes('injective_fix') && content.includes('return (0, encoding_1.fromBase64)(s)')) {
     console.log(`[patch-cosmjs] responses patch: already applied (${RESP_FILE.split('node_modules/')[1].split('/')[0]})`);
+    continue;
+  }
+  // Fix recursive bug from previous bad patch
+  if (content.includes('return safeFromBase64(s)')) {
+    const fixed = content.replace('return safeFromBase64(s);', 'return (0, encoding_1.fromBase64)(s);');
+    fs.writeFileSync(RESP_FILE, fixed, 'utf8');
+    console.log(`[patch-cosmjs] responses patch: fixed recursive bug in ${RESP_FILE.split('node_modules/')[1]}`);
     continue;
   }
   let patched = content.replace(
