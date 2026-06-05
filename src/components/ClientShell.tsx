@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useWalletContext, useWalletContextSafe } from '@/components/wallet/WalletProvider';
+import { useWalletContextSafe } from '@/components/wallet/WalletProvider';
 
 const WalletProvider = dynamic(
   () => import('@/components/wallet/WalletProvider').then((m) => m.WalletProvider),
@@ -49,12 +49,12 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
             className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
               item.adminOnly
                 ? active ? 'text-yellow-300' : 'text-yellow-500/70 hover:text-yellow-300'
-                : active ? 'text-green-400' : 'text-gray-400 hover:text-white'
+                : active ? 'text-blue-400' : 'text-gray-400 hover:text-white'
             }`}
           >
             {item.label}
             {item.soon && (
-              <span className="absolute -top-2 -right-1 bg-green-500 text-black text-[8px] font-black uppercase px-1 py-0.5 rounded leading-none">
+              <span className="absolute -top-2 -right-1 bg-blue-500 text-black text-[8px] font-black uppercase px-1 py-0.5 rounded leading-none">
                 Soon
               </span>
             )}
@@ -83,12 +83,12 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
 
           {/* Logo */}
           <a href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-7 h-7 bg-green-500 rounded-md flex items-center justify-center">
-              <span className="text-black font-black text-xs">⚽</span>
+            <div className="w-7 h-7 bg- rounded-md flex items-center justify-center">
+              <img src="../favicon.jpg" alt="injlogo" className="w-10 h-10 object-contain" />
             </div>
             <span className="text-base font-black tracking-tight leading-none">
               <span className="text-white">INJ</span>
-              <span className="text-green-400">MATCH</span>
+              <span className="text-blue-400">MATCH</span>
             </span>
           </a>
 
@@ -106,7 +106,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
                   key={l}
                   onClick={() => setLang(l)}
                   className={`px-2.5 py-1 text-xs font-bold uppercase tracking-widest transition-colors ${
-                    lang === l ? 'bg-green-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
+                    lang === l ? 'bg-blue-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
                   }`}
                 >
                   {l}
@@ -148,7 +148,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
                     key={l}
                     onClick={() => setLang(l)}
                     className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
-                      lang === l ? 'bg-green-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
+                      lang === l ? 'bg-blue-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
                     }`}
                   >
                     {l}
