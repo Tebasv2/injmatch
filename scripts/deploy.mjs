@@ -68,18 +68,26 @@ async function main() {
   // ── Upload WASM ───────────────────────────────────────────────────────────────
   const wasm = readFileSync(join(__dir, '../contracts/artifacts/injmatch_lowered.wasm'));
   console.log(`📦  Uploading WASM (${(wasm.length/1024).toFixed(1)} KB)...`);
-  const uploadResult = await client.upload(account.address, wasm, 'auto');
+  const uploadFee = {
+    amount: [{ denom: 'inj', amount: '50000000000000000' }], // 0.05 INJ
+    gas: '100000000', // 100M gas for ~260KB WASM
+  };
+  const uploadResult = await client.upload(account.address, wasm, uploadFee);
   console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
   console.log(`   TX: ${uploadResult.transactionHash}\n`);
 
   // ── Instantiate ───────────────────────────────────────────────────────────────
   console.log('🚀  Instantiating contract...');
+  const instantiateFee = {
+    amount: [{ denom: 'inj', amount: '5000000000000000' }], // 0.005 INJ
+    gas: '10000000', // 10M gas for instantiate
+  };
   const instantiateResult = await client.instantiate(
     account.address,
     uploadResult.codeId,
     {},
     'InjMatch v1',
-    'auto',
+    instantiateFee,
     { admin: account.address },
   );
 
