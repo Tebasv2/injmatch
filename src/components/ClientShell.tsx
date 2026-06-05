@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useWalletContext, useWalletContextSafe } from '@/components/wallet/WalletProvider';
+import { useWalletContextSafe } from '@/components/wallet/WalletProvider';
 
 const WalletProvider = dynamic(
   () => import('@/components/wallet/WalletProvider').then((m) => m.WalletProvider),
@@ -47,13 +47,9 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
             href={item.soon ? '#' : item.href}
             onClick={onClose}
             className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
-<<<<<<< HEAD
-              active ? 'text-blue-400' : 'text-gray-400 hover:text-white'
-=======
               item.adminOnly
                 ? active ? 'text-yellow-300' : 'text-yellow-500/70 hover:text-yellow-300'
-                : active ? 'text-green-400' : 'text-gray-400 hover:text-white'
->>>>>>> 6617a4edb21cbcda6776f4414685252f6614153e
+                : active ? 'text-blue-400' : 'text-gray-400 hover:text-white'
             }`}
           >
             {item.label}
