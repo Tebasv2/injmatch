@@ -66,7 +66,7 @@ async function main() {
   }
 
   // ── Upload WASM ───────────────────────────────────────────────────────────────
-  const wasm = readFileSync(join(__dir, '../contracts/artifacts/injmatch.wasm'));
+  const wasm = readFileSync(join(__dir, '../contracts/artifacts/injmatch_lowered.wasm'));
   console.log('📦  Uploading WASM...');
   const uploadResult = await client.upload(account.address, wasm, 'auto');
   console.log(`✅  Code uploaded! code_id = ${uploadResult.codeId}`);
