@@ -46,60 +46,32 @@ if (!fs.existsSync(ACCOUNTS_FILE)) {
   }
 }
 
-// ── Patch 2: fromBase64 padding ──────────────────────────────────────────────
-// Injective's Tendermint RPC returns unpadded base64 in response fields.
-// base64-js throws "Invalid string. Length must be a multiple of 4" unless padded.
+// ── Patch 2: fromBase64 padding (all copies) ─────────────────────────────────
+// Injective's Tendermint RPC returns url-safe / unpadded base64 in responses.
+// Must patch every nested copy of @cosmjs/encoding, not just the top-level one.
 
-const BASE64_FILE = path.join(
-  __dirname, '../node_modules/@cosmjs/encoding/build/base64.js'
-);
+const BASE64_FILES = [
+  '../node_modules/@cosmjs/encoding/build/base64.js',
+  '../node_modules/@cosmjs/proto-signing/node_modules/@cosmjs/encoding/build/base64.js',
+  '../node_modules/@cosmjs/tendermint-rpc/node_modules/@cosmjs/encoding/build/base64.js',
+  '../node_modules/@cosmjs/stargate/node_modules/@cosmjs/encoding/build/base64.js',
+].map(p => path.join(__dirname, p));
 
-if (!fs.existsSync(BASE64_FILE)) {
-  console.log('[patch-cosmjs] base64.js not found — skipping fromBase64 patch');
-} else {
+for (const BASE64_FILE of BASE64_FILES) {
+  if (!fs.existsSync(BASE64_FILE)) continue;
   const content = fs.readFileSync(BASE64_FILE, 'utf8');
-
   if (content.includes('pad_injective_fix')) {
-    console.log('[patch-cosmjs] fromBase64 patch: already applied');
+    console.log(`[patch-cosmjs] fromBase64 patch: already applied (${path.basename(path.dirname(path.dirname(path.dirname(BASE64_FILE))))})` );
+    continue;
+  }
+  const patched = content.replace(
+    'function fromBase64(base64String) {',
+    `function fromBase64(base64String) {\n    // pad_injective_fix\n    base64String = base64String.replace(/-/g, '+').replace(/_/g, '/');\n    while (base64String.length % 4 !== 0) base64String += '=';`
+  );
+  if (patched === content) {
+    console.warn(`[patch-cosmjs] fromBase64 patch: pattern not found in ${BASE64_FILE}`);
   } else {
-    // Replace the fromBase64 function to add padding before decoding
-    const original = `function fromBase64(base64String) {
-    if (!base64String.match(/^[a-zA-Z0-9+/]*={0,2}$/)) {
-        throw new Error("Invalid base64 string format");
-    }
-    return base64js.toByteArray(base64String);
-}`;
-
-    const replacement = `function fromBase64(base64String) {
-    // pad_injective_fix: Injective RPC may return url-safe or unpadded base64
-    base64String = base64String.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64String.length % 4 !== 0) base64String += '=';
-    if (!base64String.match(/^[a-zA-Z0-9+/]*={0,2}$/)) {
-        const bad = [...new Set(base64String.replace(/[a-zA-Z0-9+/=]/g, ''))].join('');
-        console.error('[fromBase64-debug] bad chars:', JSON.stringify(bad), '| hex:', Buffer.from(bad).toString('hex'));
-        throw new Error("Invalid base64 string format");
-    }
-    return base64js.toByteArray(base64String);
-}`;
-
-    const patched = content.replace(original, replacement);
-
-    if (patched === content) {
-      console.warn('[patch-cosmjs] fromBase64 patch: pattern not found — cosmjs version may differ');
-      // Try a more lenient replacement
-      const lenientPatched = content.replace(
-        'function fromBase64(base64String) {',
-        `function fromBase64(base64String) {\n    // pad_injective_fix\n    base64String = base64String.replace(/-/g, '+').replace(/_/g, '/');\n    while (base64String.length % 4 !== 0) base64String += '=';`
-      );
-      if (lenientPatched !== content) {
-        fs.writeFileSync(BASE64_FILE, lenientPatched, 'utf8');
-        console.log('[patch-cosmjs] fromBase64 patch: applied (lenient)');
-      } else {
-        console.warn('[patch-cosmjs] fromBase64 patch: could not apply');
-      }
-    } else {
-      fs.writeFileSync(BASE64_FILE, patched, 'utf8');
-      console.log('[patch-cosmjs] fromBase64 patch: applied');
-    }
+    fs.writeFileSync(BASE64_FILE, patched, 'utf8');
+    console.log(`[patch-cosmjs] fromBase64 patch: applied to ${BASE64_FILE.split('node_modules/')[1]}`);
   }
 }
