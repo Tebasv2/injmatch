@@ -16,6 +16,17 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
+
+// Intercept ALL errors to get full stack traces (helps diagnose Injective compat issues)
+const _origEmit = process.emit.bind(process);
+process.emit = function(event, ...args) {
+  if (event === 'uncaughtException' || event === 'unhandledRejection') {
+    const err = args[0];
+    console.error('\n🔍 FULL STACK TRACE:');
+    console.error(err?.stack || err);
+  }
+  return _origEmit(event, ...args);
+};
 const __dir   = dirname(fileURLToPath(import.meta.url));
 const RPC     = 'https://testnet.sentry.tm.injective.network:443';
 const PREFIX  = 'inj';
@@ -102,5 +113,6 @@ async function main() {
 
 main().catch(err => {
   console.error('❌ ', err?.message ?? err);
+  console.error('\n🔍 Stack:', err?.stack);
   process.exit(1);
 });
