@@ -37,10 +37,7 @@ async function fetchScore(fdMatchId: string): Promise<{ home: number; away: numb
 async function fetchPlayerStats(matchId: string) {
   if (!AF_KEY) return null;
   const res = await fetch(`${AF_BASE}/fixtures/players?fixture=${matchId}`, {
-    headers: {
-      'x-rapidapi-host': 'v3.football.api-sports.io',
-      'x-rapidapi-key': AF_KEY,
-    },
+    headers: { 'x-apisports-key': AF_KEY! },
   });
   if (!res.ok) return null;
   return res.json();

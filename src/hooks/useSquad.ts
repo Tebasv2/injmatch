@@ -13,6 +13,8 @@ interface OnChainSquad {
   formation: string;
   starter_ids: string[];
   bench_ids: string[];
+  captain_id?: string | null;
+  vice_captain_id?: string | null;
   saved_at: number;
 }
 
@@ -25,6 +27,8 @@ export function useSquad(address: string | null) {
   const [starters, setStarters] = useState<(Player | null)[]>(Array(11).fill(null));
   const [bench, setBench] = useState<(Player | null)[]>(Array(3).fill(null));
   const [formation, setFormation] = useState<Formation>('4-3-3');
+  const [captainId, setCaptainId] = useState<string | null>(null);
+  const [viceCaptainId, setViceCaptainId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
@@ -48,6 +52,8 @@ export function useSquad(address: string | null) {
         data.bench_ids.forEach((id, i) => { if (i < 3) benchSlots[i] = PLAYERS.find((p) => p.id === id) ?? null; });
         setStarters(starterSlots);
         setBench(benchSlots);
+        setCaptainId(data.captain_id ?? null);
+        setViceCaptainId(data.vice_captain_id ?? null);
         setLastSaved(new Date(data.saved_at * 1000));
       }
       setSaveStatus('idle');
@@ -84,7 +90,15 @@ export function useSquad(address: string | null) {
       await client.execute(
         address,
         CONTRACT_ADDRESS,
-        { save_squad: { formation, starter_ids: starterIds, bench_ids: benchIds } },
+        {
+          save_squad: {
+            formation,
+            starter_ids: starterIds,
+            bench_ids: benchIds,
+            captain_id: captainId ?? null,
+            vice_captain_id: viceCaptainId ?? null,
+          },
+        },
         'auto',
       );
 
@@ -96,12 +110,14 @@ export function useSquad(address: string | null) {
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 4000);
     }
-  }, [address, starters, bench, formation]);
+  }, [address, starters, bench, formation, captainId, viceCaptainId]);
 
   return {
     starters, setStarters,
     bench, setBench,
     formation, setFormation,
+    captainId, setCaptainId,
+    viceCaptainId, setViceCaptainId,
     saveStatus, lastSaved,
     saveSquad, loadSquad,
   };
