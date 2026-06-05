@@ -71,9 +71,12 @@ if (!fs.existsSync(BASE64_FILE)) {
 }`;
 
     const replacement = `function fromBase64(base64String) {
-    // pad_injective_fix: Injective RPC may return unpadded base64
+    // pad_injective_fix: Injective RPC may return url-safe or unpadded base64
+    base64String = base64String.replace(/-/g, '+').replace(/_/g, '/');
     while (base64String.length % 4 !== 0) base64String += '=';
     if (!base64String.match(/^[a-zA-Z0-9+/]*={0,2}$/)) {
+        const bad = [...new Set(base64String.replace(/[a-zA-Z0-9+/=]/g, ''))].join('');
+        console.error('[fromBase64-debug] bad chars:', JSON.stringify(bad), '| hex:', Buffer.from(bad).toString('hex'));
         throw new Error("Invalid base64 string format");
     }
     return base64js.toByteArray(base64String);
@@ -86,7 +89,7 @@ if (!fs.existsSync(BASE64_FILE)) {
       // Try a more lenient replacement
       const lenientPatched = content.replace(
         'function fromBase64(base64String) {',
-        `function fromBase64(base64String) {\n    // pad_injective_fix\n    while (base64String.length % 4 !== 0) base64String += '=';`
+        `function fromBase64(base64String) {\n    // pad_injective_fix\n    base64String = base64String.replace(/-/g, '+').replace(/_/g, '/');\n    while (base64String.length % 4 !== 0) base64String += '=';`
       );
       if (lenientPatched !== content) {
         fs.writeFileSync(BASE64_FILE, lenientPatched, 'utf8');
