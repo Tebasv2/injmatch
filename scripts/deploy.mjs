@@ -96,35 +96,53 @@ async function main() {
   console.log(`   TX: ${uploadTxResult.transactionHash}`);
   console.log(`   Raw log: ${uploadTxResult.rawLog?.slice(0, 200)}`);
 
-  // Decode attribute key/value — tendermint34 returns Uint8Array bytes, not strings
-  function decodeAttr(v) {
-    if (!v) return '';
-    if (v instanceof Uint8Array || Buffer.isBuffer(v)) return Buffer.from(v).toString('utf8');
-    return String(v);
-  }
+  console.log(`   TX: ${uploadTxResult.transactionHash}`);
 
-  // Print all events
-  console.log('   Events:');
-  for (const ev of (uploadTxResult.events || [])) {
-    const attrs = (ev.attributes || []).map(a => `${decodeAttr(a.key)}=${decodeAttr(a.value)}`).join(', ');
-    console.log(`     [${ev.type}] ${attrs}`);
-  }
-
-  // Extract code_id from events
+  // Query Injective REST API to find the code_id — avoids broken event attribute parsing
+  const LCD = 'https://testnet.sentry.lcd.injective.network';
+  console.log('🔍  Querying chain for code_id...');
   let codeId = null;
-  for (const ev of (uploadTxResult.events || [])) {
-    for (const attr of (ev.attributes || [])) {
-      if (decodeAttr(attr.key) === 'code_id') { codeId = decodeAttr(attr.value); break; }
-    }
-    if (codeId) break;
+
+  // Wait up to 15s for the tx to be indexed
+  for (let attempt = 0; attempt < 5 && !codeId; attempt++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const res  = await fetch(`${LCD}/cosmos/tx/v1beta1/txs/${uploadTxResult.transactionHash}`);
+      const json = await res.json();
+      const logs = json?.tx_response?.logs ?? [];
+      const rawLog = json?.tx_response?.raw_log ?? '';
+
+      // Search events in logs
+      for (const log of logs) {
+        for (const ev of (log.events ?? [])) {
+          for (const attr of (ev.attributes ?? [])) {
+            if (attr.key === 'code_id') { codeId = attr.value; break; }
+          }
+          if (codeId) break;
+        }
+        if (codeId) break;
+      }
+      // Also check top-level events
+      if (!codeId) {
+        for (const ev of (json?.tx_response?.events ?? [])) {
+          for (const attr of (ev.attributes ?? [])) {
+            if (attr.key === 'code_id') { codeId = attr.value; break; }
+          }
+          if (codeId) break;
+        }
+      }
+      // rawLog fallback
+      if (!codeId && rawLog) {
+        const m = rawLog.match(/"key":"code_id","value":"(\d+)"|"code_id":"(\d+)"/);
+        if (m) codeId = m[1] || m[2];
+      }
+      if (codeId) break;
+    } catch(e) { /* retry */ }
   }
-  // Fallback: parse rawLog
-  if (!codeId && uploadTxResult.rawLog) {
-    const m = uploadTxResult.rawLog.match(/"code_id","value":"(\d+)"|"code_id":"(\d+)"|code_id[^\d]*(\d+)/);
-    if (m) codeId = m[1] || m[2] || m[3];
-  }
+
   if (!codeId) {
-    console.error('❌  Could not extract code_id.');
+    console.error('❌  Could not extract code_id from REST API response.');
+    console.error(`    Check manually: ${LCD}/cosmos/tx/v1beta1/txs/${uploadTxResult.transactionHash}`);
     process.exit(1);
   }
   console.log(`✅  Code uploaded! code_id = ${codeId}\n`);
