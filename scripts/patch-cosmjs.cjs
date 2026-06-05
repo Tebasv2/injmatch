@@ -96,8 +96,10 @@ function safeFromBase64(s) {
 
 const RESPONSES_FILES = [
   '../node_modules/@cosmjs/cosmwasm-stargate/node_modules/@cosmjs/tendermint-rpc/build/comet38/adaptor/responses.js',
+  '../node_modules/@cosmjs/cosmwasm-stargate/node_modules/@cosmjs/tendermint-rpc/build/tendermint34/adaptor/responses.js',
   '../node_modules/@cosmjs/tendermint-rpc/build/comet38/adaptor/responses.js',
   '../node_modules/@cosmjs/tendermint-rpc/build/comet1/adaptor/responses.js',
+  '../node_modules/@cosmjs/tendermint-rpc/build/tendermint34/adaptor/responses.js',
 ].map(p => path.join(__dirname, p));
 
 for (const RESP_FILE of RESPONSES_FILES) {
