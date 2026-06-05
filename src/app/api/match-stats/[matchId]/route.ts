@@ -17,8 +17,7 @@ export async function GET(
 
   const res = await fetch(`${AF_BASE}/fixtures/players?fixture=${matchId}`, {
     headers: {
-      'x-rapidapi-host': 'v3.football.api-sports.io',
-      'x-rapidapi-key': API_KEY,
+      'x-apisports-key': API_KEY,
     },
     next: { revalidate: 300 },
   });

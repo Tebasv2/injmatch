@@ -7,10 +7,11 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, PlayerScore, QueryMsg};
 use crate::state::{
-    Config, League, LeaderboardEntry, LeagueStatus, MatchResult, MatchStage, Prediction,
-    SavedSquad, CONFIG, LEAGUES, MATCH_RESULTS, PREDICTIONS, SQUADS,
+    Config, FantasyEntry, League, LeaderboardEntry, LeagueStatus, MatchResult, MatchStage,
+    Prediction, SavedSquad, CONFIG, FANTASY_POINTS, LEAGUES, MATCH_RESULTS, PLAYER_SCORES,
+    PREDICTIONS, SQUADS,
 };
 
 const CONTRACT_NAME: &str = "crates.io:injmatch";
@@ -57,8 +58,11 @@ pub fn execute(
         }
         ExecuteMsg::StartLeague { league_id } => execute_start_league(deps, info, league_id),
         ExecuteMsg::FinishLeague { league_id } => execute_finish_league(deps, info, league_id),
-        ExecuteMsg::SaveSquad { formation, starter_ids, bench_ids } => {
-            execute_save_squad(deps, env, info, formation, starter_ids, bench_ids)
+        ExecuteMsg::SaveSquad { formation, starter_ids, bench_ids, captain_id, vice_captain_id } => {
+            execute_save_squad(deps, env, info, formation, starter_ids, bench_ids, captain_id, vice_captain_id)
+        }
+        ExecuteMsg::SubmitPlayerScores { fixture_id, player_scores } => {
+            execute_submit_player_scores(deps, info, fixture_id, player_scores)
         }
     }
 }
@@ -242,7 +246,6 @@ fn execute_distribute_prizes(
     let mut messages: Vec<CosmosMsg> = vec![];
     let prize_pool = league.prize_pool;
 
-    // Distribution: 60% first, 30% second, 10% third
     let shares = [600u128, 300u128, 100u128];
     for (i, entry) in leaderboard.iter().take(3).enumerate() {
         let amount = prize_pool.u128() * shares[i] / 1000;
@@ -314,9 +317,11 @@ fn execute_save_squad(
     formation: String,
     starter_ids: Vec<String>,
     bench_ids: Vec<String>,
+    captain_id: Option<String>,
+    vice_captain_id: Option<String>,
 ) -> Result<Response, ContractError> {
     if starter_ids.len() > 11 {
-        return Err(ContractError::Unauthorized {}); // reuse generic error for now
+        return Err(ContractError::Unauthorized {});
     }
     if bench_ids.len() > 3 {
         return Err(ContractError::Unauthorized {});
@@ -327,12 +332,92 @@ fn execute_save_squad(
         formation,
         starter_ids,
         bench_ids,
+        captain_id,
+        vice_captain_id,
         saved_at: env.block.time.seconds(),
     };
     SQUADS.save(deps.storage, &owner, &squad)?;
     Ok(Response::new()
         .add_attribute("action", "save_squad")
         .add_attribute("owner", owner))
+}
+
+fn execute_submit_player_scores(
+    deps: DepsMut,
+    info: MessageInfo,
+    fixture_id: String,
+    player_scores: Vec<PlayerScore>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender.to_string() != config.owner {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Store each player's points for this fixture
+    for ps in &player_scores {
+        PLAYER_SCORES.save(
+            deps.storage,
+            (fixture_id.as_str(), ps.player_id.as_str()),
+            &ps.points,
+        )?;
+    }
+
+    // Build a quick lookup map: player_id -> points
+    let score_map: std::collections::HashMap<&str, i64> = player_scores
+        .iter()
+        .map(|ps| (ps.player_id.as_str(), ps.points))
+        .collect();
+
+    // Iterate every saved squad and credit each manager
+    let squads: Vec<(String, SavedSquad)> = SQUADS
+        .range(deps.storage, None, None, Order::Ascending)
+        .filter_map(|r| r.ok())
+        .collect();
+
+    let mut credited = 0u32;
+    for (owner, squad) in squads {
+        let mut match_pts: i64 = 0;
+
+        for (i, player_id) in squad.starter_ids.iter().enumerate() {
+            if player_id.is_empty() {
+                continue;
+            }
+            let base = *score_map.get(player_id.as_str()).unwrap_or(&0);
+            let pts = if squad.captain_id.as_deref() == Some(player_id.as_str()) {
+                base * 2
+            } else if squad.vice_captain_id.as_deref() == Some(player_id.as_str()) {
+                // 1.5x using integer arithmetic: base + base/2
+                base + base / 2
+            } else {
+                base
+            };
+            let _ = i; // suppress unused warning
+            match_pts += pts;
+        }
+
+        // Bench players score normally (no captain bonus, automatic sub not implemented)
+        for player_id in &squad.bench_ids {
+            if player_id.is_empty() {
+                continue;
+            }
+            let base = *score_map.get(player_id.as_str()).unwrap_or(&0);
+            match_pts += base;
+        }
+
+        if match_pts != 0 {
+            let current = FANTASY_POINTS
+                .may_load(deps.storage, &owner)?
+                .unwrap_or(0);
+            FANTASY_POINTS.save(deps.storage, &owner, &(current + match_pts))?;
+            credited += 1;
+        }
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "submit_player_scores")
+        .add_attribute("fixture_id", fixture_id)
+        .add_attribute("players_scored", player_scores.len().to_string())
+        .add_attribute("squads_credited", credited.to_string()))
 }
 
 fn compute_leaderboard(
@@ -449,6 +534,26 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetSquad { owner } => {
             let squad = SQUADS.may_load(deps.storage, &owner)?;
             to_json_binary(&squad)
+        }
+        QueryMsg::GetFantasyLeaderboard { limit } => {
+            let limit = limit.unwrap_or(200) as usize;
+            let mut entries: Vec<FantasyEntry> = FANTASY_POINTS
+                .range(deps.storage, None, None, Order::Ascending)
+                .filter_map(|r| r.ok())
+                .map(|(address, total_points)| FantasyEntry {
+                    address,
+                    total_points,
+                    rank: 0,
+                })
+                .collect();
+
+            entries.sort_by(|a, b| b.total_points.cmp(&a.total_points));
+            entries.truncate(limit);
+            for (i, entry) in entries.iter_mut().enumerate() {
+                entry.rank = (i + 1) as u32;
+            }
+
+            to_json_binary(&entries)
         }
     }
 }

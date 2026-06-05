@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useWalletContext, useWalletContextSafe } from '@/components/wallet/WalletProvider';
 
 const WalletProvider = dynamic(
   () => import('@/components/wallet/WalletProvider').then((m) => m.WalletProvider),
@@ -16,19 +17,29 @@ const WalletButton = dynamic(
   { ssr: false },
 );
 
+const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS ?? '';
+
 const NAV = [
-  { label: 'World Cup',   href: '/',            soon: false },
-  { label: 'Fixtures',    href: '/fixtures',    soon: false },
-  { label: 'Squad',       href: '/squad',       soon: false },
-  { label: 'Leaderboard', href: '/leaderboard', soon: false },
-  { label: 'FAQ',         href: '/faq',         soon: false },
+  { label: 'World Cup',   href: '/',            soon: false, adminOnly: false },
+  { label: 'Fixtures',    href: '/fixtures',    soon: false, adminOnly: false },
+  { label: 'Squad',       href: '/squad',       soon: false, adminOnly: false },
+  { label: 'Leaderboard', href: '/leaderboard', soon: false, adminOnly: false },
+  { label: 'FAQ',         href: '/faq',         soon: false, adminOnly: false },
+  { label: 'Scores',      href: '/scores',      soon: false, adminOnly: true  },
+  { label: 'Admin',       href: '/admin',       soon: false, adminOnly: true  },
 ];
 
 function NavLinks({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const ctx = useWalletContextSafe();
+  const address = ctx?.address ?? null;
+  const isAdmin = !!(ADMIN_ADDRESS && address && address === ADMIN_ADDRESS);
+
+  const links = NAV.filter(item => !item.adminOnly || isAdmin);
+
   return (
     <>
-      {NAV.map((item) => {
+      {links.map((item) => {
         const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
         return (
           <Link
@@ -36,7 +47,13 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
             href={item.soon ? '#' : item.href}
             onClick={onClose}
             className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
+<<<<<<< HEAD
               active ? 'text-blue-400' : 'text-gray-400 hover:text-white'
+=======
+              item.adminOnly
+                ? active ? 'text-yellow-300' : 'text-yellow-500/70 hover:text-yellow-300'
+                : active ? 'text-green-400' : 'text-gray-400 hover:text-white'
+>>>>>>> 6617a4edb21cbcda6776f4414685252f6614153e
             }`}
           >
             {item.label}
@@ -51,6 +68,7 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
     </>
   );
 }
+
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const [lang, setLang]       = useState<'EN' | 'UA'>('EN');

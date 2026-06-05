@@ -102,8 +102,8 @@ const CATEGORIES: FAQCategory[] = [
         a: 'Bench players score points only as automatic substitutes — if one of your starters did not play at all in a gameweek, the first eligible bench player is brought in.',
       },
       {
-        q: 'Does the captain earn bonus points?',
-        a: 'Yes. You can designate a captain before each gameweek deadline. Your captain\'s points are doubled for that round.',
+        q: 'How do the captain and vice-captain work?',
+        a: 'You assign a captain (C) and a vice-captain (V) from your starting XI. Your captain\'s points are multiplied by 2× for that round, while your vice-captain\'s points are multiplied by 1.5×. Choose your highest-scoring starter wisely — the armband can make or break a gameweek.',
       },
     ],
   },

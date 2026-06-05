@@ -68,6 +68,8 @@ export default function SquadPage() {
     starters, setStarters,
     bench, setBench,
     formation, setFormation,
+    captainId, setCaptainId,
+    viceCaptainId, setViceCaptainId,
     saveStatus, lastSaved,
     saveSquad,
   } = useSquad(address);
@@ -114,6 +116,8 @@ export default function SquadPage() {
     if (selectedIds.includes(player.id)) {
       setStarters((prev) => prev.map((p) => (p?.id === player.id ? null : p)));
       setBench((prev) => prev.map((p) => (p?.id === player.id ? null : p)));
+      if (captainId === player.id) setCaptainId(null);
+      if (viceCaptainId === player.id) setViceCaptainId(null);
       return;
     }
     if (!selectedSlot) return;
@@ -168,6 +172,8 @@ export default function SquadPage() {
     setStarters(Array(11).fill(null));
     setBench(Array(3).fill(null));
     setSelectedSlot(null);
+    setCaptainId(null);
+    setViceCaptainId(null);
   };
 
   return (
@@ -234,10 +240,76 @@ export default function SquadPage() {
             starters={starters}
             selectedSlot={selectedSlot?.type === 'starter' ? selectedSlot.index : null}
             onSlotClick={(i) => handleSlotClick('starter', i)}
+            captainId={captainId}
+            viceCaptainId={viceCaptainId}
           />
 
           {/* Budget bar */}
           <BudgetBar spent={totalSpent} budget={SQUAD_BUDGET} />
+
+          {/* Captain / Vice-Captain picker */}
+          {starters.some(Boolean) && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
+              <p className="text-[9px] text-gray-500 uppercase tracking-[0.25em] font-bold">Armband</p>
+              <div className="flex gap-3">
+                {/* Captain */}
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-yellow-400 text-black text-[9px] font-black flex items-center justify-center">C</span>
+                    <span className="text-[10px] text-gray-400 font-bold">Captain <span className="text-yellow-400">×2</span></span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {starters.filter(Boolean).map((p) => p && (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          if (captainId === p.id) { setCaptainId(null); return; }
+                          setCaptainId(p.id);
+                          if (viceCaptainId === p.id) setViceCaptainId(null);
+                        }}
+                        className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all truncate max-w-[80px] ${
+                          captainId === p.id
+                            ? 'border-yellow-400 bg-yellow-400/15 text-yellow-300'
+                            : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                        }`}
+                      >
+                        {p.name.split(' ').slice(-1)[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-px bg-gray-800 self-stretch" />
+
+                {/* Vice-Captain */}
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-white/80 text-black text-[9px] font-black flex items-center justify-center">V</span>
+                    <span className="text-[10px] text-gray-400 font-bold">Vice-Captain <span className="text-white/60">×1.5</span></span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {starters.filter(Boolean).map((p) => p && (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          if (viceCaptainId === p.id) { setViceCaptainId(null); return; }
+                          setViceCaptainId(p.id);
+                          if (captainId === p.id) setCaptainId(null);
+                        }}
+                        className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all truncate max-w-[80px] ${
+                          viceCaptainId === p.id
+                            ? 'border-white/70 bg-white/10 text-white'
+                            : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                        }`}
+                      >
+                        {p.name.split(' ').slice(-1)[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bench */}
           <div className="bg-[#111] border border-gray-800 rounded-2xl p-4">

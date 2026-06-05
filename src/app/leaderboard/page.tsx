@@ -136,10 +136,10 @@ export default function LeaderboardPage() {
 
     CosmWasmClient.connect(RPC).then(async client => {
       // Query the leaderboard from the smart contract
-      const result = await client.queryContractSmart(CONTRACT, { get_leaderboard: { league_id: '1' } }).catch(() => null);
+      const result = await client.queryContractSmart(CONTRACT, { get_fantasy_leaderboard: { limit: 200 } }).catch(() => null);
 
       if (!result || !Array.isArray(result) || result.length === 0) {
-        // No leagues yet — query all squads instead
+        // No scores submitted yet — leaderboard is empty
         // The contract doesn't have a list_squads endpoint, so we show an empty state
         setEntries([]);
         setLoading(false);
@@ -147,13 +147,13 @@ export default function LeaderboardPage() {
       }
 
       const mapped: LeaderboardEntry[] = await Promise.all(
-        result.map(async (entry: { address: string; points: number; rank: number }) => {
+        result.map(async (entry: { address: string; total_points: number; rank: number }) => {
           const squad = await client.queryContractSmart(CONTRACT, { get_squad: { owner: entry.address } }).catch(() => null);
           return {
             rank:        entry.rank,
             address:     entry.address,
             formation:   squad?.formation ?? '—',
-            totalPoints: entry.points ?? 0,
+            totalPoints: entry.total_points ?? 0,
             weekPoints:  0,
             starterIds:  squad?.starter_ids ?? [],
             benchIds:    squad?.bench_ids ?? [],

@@ -61,6 +61,8 @@ export function useContract(address: string | null) {
       execute({ submit_prediction: { league_id: leagueId, match_id: matchId, home_score: homeScore, away_score: awayScore } }),
     submitResult: (leagueId: string, matchId: string, homeTeam: string, awayTeam: string, homeScore: number, awayScore: number) =>
       execute({ submit_result: { league_id: leagueId, match_id: matchId, home_team: homeTeam, away_team: awayTeam, home_score: homeScore, away_score: awayScore } }),
+    submitPlayerScores: (fixtureId: string, playerScores: { player_id: string; points: number }[]) =>
+      execute({ submit_player_scores: { fixture_id: fixtureId, player_scores: playerScores } }),
     distributePrizes: (leagueId: string) =>
       execute({ distribute_prizes: { league_id: leagueId } }),
     startLeague: (leagueId: string) =>

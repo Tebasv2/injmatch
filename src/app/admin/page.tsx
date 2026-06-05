@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
+import { useContract } from '@/hooks/useContract';
 import type { ScoredPlayer } from '@/types/scoring';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS ?? '';
@@ -100,7 +101,7 @@ function ScoreRow({ p }: { p: ScoredPlayer }) {
   );
 }
 
-function MatchScorer() {
+function MatchScorer({ adminAddress }: { adminAddress: string }) {
   const [matchId,   setMatchId]  = useState('');
   const [homeGoals, setHome]     = useState('');
   const [awayGoals, setAway]     = useState('');
@@ -108,6 +109,9 @@ function MatchScorer() {
   const [loading,   setLoading]  = useState(false);
   const [error,     setError]    = useState<string | null>(null);
   const [filter,    setFilter]   = useState<'ALL'|'GK'|'DEF'|'MID'|'FWD'>('ALL');
+  const [submitStatus, setSubmitStatus] = useState<'idle'|'submitting'|'done'|'error'>('idle');
+  const [submitTx,     setSubmitTx]     = useState<string | null>(null);
+  const contract = useContract(adminAddress);
 
   async function run() {
     if (!matchId.trim()) return;
@@ -126,6 +130,24 @@ function MatchScorer() {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function submitOnChain() {
+    if (!result) return;
+    setSubmitStatus('submitting');
+    setSubmitTx(null);
+    try {
+      const playerScores = result.players.map(p => ({
+        player_id: p.playerId,
+        points: p.breakdown.total,
+      }));
+      const tx = await contract.submitPlayerScores(String(result.fixtureId), playerScores);
+      setSubmitTx((tx as any).transactionHash ?? 'submitted');
+      setSubmitStatus('done');
+    } catch (e: any) {
+      setError(e.message ?? 'Submit failed');
+      setSubmitStatus('error');
     }
   }
 
@@ -203,6 +225,33 @@ function MatchScorer() {
 
       {result && (
         <div className="space-y-3">
+          {/* Submit on-chain banner */}
+          <div className="bg-white/4 border border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-bold text-white">Ready to submit on-chain?</p>
+              <p className="text-xs text-white/40 mt-0.5">
+                This will sign a transaction crediting every manager's squad with points from fixture {result.fixtureId}.
+                Captain gets ×2, vice-captain gets ×1.5.
+              </p>
+              {submitTx && (
+                <p className="text-xs text-emerald-400 mt-1 font-mono break-all">✓ TX: {submitTx}</p>
+              )}
+            </div>
+            <button
+              onClick={submitOnChain}
+              disabled={submitStatus === 'submitting' || submitStatus === 'done'}
+              className={`flex-shrink-0 px-5 py-2.5 rounded-lg font-bold text-sm transition-colors ${
+                submitStatus === 'done'
+                  ? 'bg-emerald-700 text-emerald-200 cursor-default'
+                  : submitStatus === 'error'
+                  ? 'bg-red-600/30 border border-red-500/40 text-red-400'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50'
+              }`}
+            >
+              {submitStatus === 'submitting' ? 'Signing…' : submitStatus === 'done' ? '✓ Submitted' : 'Submit On-Chain'}
+            </button>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="text-sm text-white/50">
               Fixture <span className="text-white font-mono">{result.fixtureId}</span>
@@ -350,7 +399,7 @@ export default function AdminPage() {
         <TransferWindowCard />
 
         {/* Match scorer */}
-        <MatchScorer />
+        <MatchScorer adminAddress={address!} />
       </div>
     </div>
   );

@@ -62,6 +62,13 @@ pub struct LeaderboardEntry {
 }
 
 #[cw_serde]
+pub struct FantasyEntry {
+    pub address: String,
+    pub total_points: i64,
+    pub rank: u32,
+}
+
+#[cw_serde]
 pub struct Config {
     pub owner: String,
     pub league_count: u64,
@@ -71,17 +78,19 @@ pub struct Config {
 pub struct SavedSquad {
     pub owner: String,
     pub formation: String,
-    pub starter_ids: Vec<String>,  // up to 11 player IDs in slot order
-    pub bench_ids: Vec<String>,    // up to 3 player IDs
+    pub starter_ids: Vec<String>,
+    pub bench_ids: Vec<String>,
+    pub captain_id: Option<String>,
+    pub vice_captain_id: Option<String>,
     pub saved_at: u64,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
-// league_id -> League
 pub const LEAGUES: Map<&str, League> = Map::new("leagues");
-// (league_id, match_id) -> MatchResult
 pub const MATCH_RESULTS: Map<(&str, &str), MatchResult> = Map::new("match_results");
-// (league_id, predictor, match_id) -> Prediction
 pub const PREDICTIONS: Map<(&str, &str, &str), Prediction> = Map::new("predictions");
-// wallet_address -> SavedSquad (one squad per wallet)
 pub const SQUADS: Map<&str, SavedSquad> = Map::new("squads");
+// (fixture_id, player_id) -> points scored in that fixture
+pub const PLAYER_SCORES: Map<(&str, &str), i64> = Map::new("player_scores");
+// wallet_address -> cumulative fantasy points across all scored fixtures
+pub const FANTASY_POINTS: Map<&str, i64> = Map::new("fantasy_points");

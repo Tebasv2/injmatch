@@ -17,3 +17,9 @@ export function useWalletContext() {
   if (!ctx) throw new Error('useWalletContext must be used inside WalletProvider');
   return ctx;
 }
+
+// Safe version — returns null when called before WalletProvider has mounted
+// (e.g. during dynamic-import loading). NavLinks uses this to avoid crashing.
+export function useWalletContextSafe() {
+  return useContext(WalletContext);
+}

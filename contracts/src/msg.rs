@@ -1,9 +1,15 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
-use crate::state::{League, LeaderboardEntry, MatchResult, Prediction, SavedSquad};
+use crate::state::{FantasyEntry, League, LeaderboardEntry, MatchResult, Prediction, SavedSquad};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
+
+#[cw_serde]
+pub struct PlayerScore {
+    pub player_id: String,
+    pub points: i64,
+}
 
 #[cw_serde]
 pub enum ExecuteMsg {
@@ -38,11 +44,17 @@ pub enum ExecuteMsg {
     FinishLeague {
         league_id: String,
     },
-    // Save the sender's squad selection on-chain
     SaveSquad {
         formation: String,
         starter_ids: Vec<String>,
         bench_ids: Vec<String>,
+        captain_id: Option<String>,
+        vice_captain_id: Option<String>,
+    },
+    // Admin-only: record player points for a finished fixture and credit each squad
+    SubmitPlayerScores {
+        fixture_id: String,
+        player_scores: Vec<PlayerScore>,
     },
 }
 
@@ -70,7 +82,10 @@ pub enum QueryMsg {
     #[returns(Option<MatchResult>)]
     GetMatchResult { league_id: String, match_id: String },
 
-    // Read back a wallet's saved squad
     #[returns(Option<SavedSquad>)]
     GetSquad { owner: String },
+
+    // Fantasy leaderboard ranked by total fantasy points
+    #[returns(Vec<FantasyEntry>)]
+    GetFantasyLeaderboard { limit: Option<u32> },
 }
