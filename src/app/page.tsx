@@ -197,9 +197,9 @@ export default function HomePage() {
           <h2 className="text-4xl md:text-5xl font-black uppercase mb-12">Points System</h2>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { pts: '3', label: 'Exact Score', desc: 'Nail the precise scoreline of the match.' },
-              { pts: '1', label: 'Correct Outcome', desc: 'Right winner or draw, wrong score.' },
-              { pts: '0', label: 'Incorrect', desc: 'Wrong result — back to the drawing board.' },
+              { pts: '4', label: 'Goal', desc: 'Goal scored by an attacker.' },
+              { pts: '3', label: 'Assists', desc: 'Points rewarded to assist.' },
+              { pts: '5', label: 'Penalty save', desc: 'Points rewarded for saving a penalty.' },
             ].map((row, i) => (
               <motion.div
                 key={row.pts}
@@ -291,7 +291,8 @@ export default function HomePage() {
 
       {/* ══════════ FOOTER ══════════ */}
       <footer className="border-t border-gray-800/50 py-8 px-6 md:px-16 flex flex-col md:flex-row justify-between items-center gap-4 text-gray-700 text-[10px] uppercase tracking-widest bg-[#0a0a0a]">
-        <span className="font-black text-white text-sm">⚽ INJMATCH</span>
+         <img src="../favicon.jpg" alt="injlogo" className="w-10 h-10 object-contain" />
+         
         <span>Injective Testnet · injective-888</span>
         <span>© 2026 InjMatch</span>
       </footer>

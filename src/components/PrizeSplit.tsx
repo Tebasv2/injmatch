@@ -28,8 +28,8 @@ export function PrizeSplit() {
       {/* Section header */}
       <div className="flex items-start justify-between mb-10 max-w-6xl mx-auto">
         <div>
-          <p className="text-green-400 text-xs font-bold uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
-            <span className="w-0.5 h-4 bg-green-400 rounded-full inline-block" />
+          <p className="text-blue-400 text-xs font-bold uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
+            <span className="w-0.5 h-4 bg-blue-400 rounded-full inline-block" />
             Prize Pool
           </p>
           <h2 className="text-4xl md:text-5xl font-black uppercase text-white mb-3">
@@ -42,7 +42,7 @@ export function PrizeSplit() {
           </p>
         </div>
         <a
-          href="#"
+          href="/leaderboard"
           className="hidden md:inline-flex items-center gap-2 border border-gray-600 hover:border-white text-white text-xs font-bold uppercase tracking-widest px-5 py-3 rounded-full transition-colors whitespace-nowrap ml-8 mt-1"
         >
           Leaderboard →
@@ -68,7 +68,7 @@ export function PrizeSplit() {
                Splits below update live as entries come in.
             </p>
           </div>
-          <p className="text-[8px] text-green-400/70 uppercase tracking-[0.15em] leading-relaxed mt-6 font-bold">
+          <p className="text-[8px] text-blue-400/70 uppercase tracking-[0.15em] leading-relaxed mt-6 font-bold">
             · Payouts are on-chain — winners claim on the leaderboard
           </p>
         </div>
@@ -77,7 +77,7 @@ export function PrizeSplit() {
         <div className="flex-1 p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <p className="text-[9px] text-gray-500 uppercase tracking-[0.25em]">Prize Split</p>
-            <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest">
+            <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">
               #1 · 30% of Pool
             </p>
           </div>
