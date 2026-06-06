@@ -22,13 +22,14 @@ const WalletButton = dynamic(
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS ?? '';
 
 const NAV = [
-  { label: 'World Cup',   href: '/',            soon: false, adminOnly: false },
-  { label: 'Fixtures',    href: '/fixtures',    soon: false, adminOnly: false },
-  { label: 'Squad',       href: '/squad',       soon: false, adminOnly: false },
-  { label: 'Leaderboard', href: '/leaderboard', soon: false, adminOnly: false },
-  { label: 'FAQ',         href: '/faq',         soon: false, adminOnly: false },
-  { label: 'Scores',      href: '/scores',      soon: false, adminOnly: true  },
-  { label: 'Admin',       href: '/admin',       soon: false, adminOnly: true  },
+  { label: 'World Cup',   href: '/',             soon: false, adminOnly: false },
+  { label: 'Fixtures',    href: '/fixtures',     soon: false, adminOnly: false },
+  { label: 'Squad',       href: '/squad',        soon: false, adminOnly: false },
+  { label: 'Predictions', href: '/predictions',  soon: false, adminOnly: false },
+  { label: 'Leaderboard', href: '/leaderboard',  soon: false, adminOnly: false },
+  { label: 'FAQ',         href: '/faq',          soon: false, adminOnly: false },
+  { label: 'Scores',      href: '/scores',       soon: false, adminOnly: true  },
+  { label: 'Admin',       href: '/admin',        soon: false, adminOnly: true  },
 ];
 
 function NavLinks({ onClose }: { onClose?: () => void }) {
@@ -76,29 +77,10 @@ function ProfileButton() {
 
   if (!address) return null;
 
-  async function handleSave(p: import('@/hooks/useProfile').UserProfile) {
+  function handleSave(p: import('@/hooks/useProfile').UserProfile) {
     saveProfile(p);
-    // Register on leaderboard by saving a default squad if not yet registered
-    try {
-      const registered = localStorage.getItem(`injmatch_registered_${address}`);
-      if (!registered) {
-        const { CHAIN_ID, ENDPOINTS, CONTRACT_ADDRESS } = await import('@/lib/network');
-        const keplr = (window as any).keplr;
-        if (keplr && CONTRACT_ADDRESS) {
-          const { SigningCosmWasmClient } = await import('@cosmjs/cosmwasm-stargate');
-          const offlineSigner = keplr.getOfflineSignerOnlyAmino(CHAIN_ID);
-          const client = await SigningCosmWasmClient.connectWithSigner(
-            ENDPOINTS.rpc as string, offlineSigner, { gasPrice: '500000000inj' as any },
-          );
-          await client.execute(address!, CONTRACT_ADDRESS, {
-            save_squad: { formation: '4-3-3', starter_ids: [], bench_ids: [], captain_id: null, vice_captain_id: null },
-          }, 'auto');
-          localStorage.setItem(`injmatch_registered_${address}`, '1');
-        }
-      }
-    } catch {
-      // silent — squad save on profile create is best-effort
-    }
+    // Mark as registered locally — leaderboard page reads this to show the user even before on-chain squad
+    if (address) localStorage.setItem(`injmatch_registered_${address}`, '1');
     setProfile(false);
   }
 
