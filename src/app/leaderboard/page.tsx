@@ -215,6 +215,8 @@ export default function LeaderboardPage() {
 
   const top3    = sorted.slice(0, 3);
   const myEntry = address ? sorted.find(e => e.address === address) : null;
+  const isRegistered = address ? !!localStorage.getItem(`injmatch_registered_${address}`) : false;
+  const showPendingRow = address && !myEntry && isRegistered;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -297,6 +299,24 @@ export default function LeaderboardPage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {showPendingRow && (
+                    <tr className="border-b border-white/5 bg-blue-500/5">
+                      <td className="py-3 pl-4 pr-2 w-10"><div className="flex justify-center"><span className="text-sm font-bold text-gray-600">—</span></div></td>
+                      <td className="py-3 px-2">
+                        <div className="flex items-center gap-2">
+                          {profile.avatar && <img src={profile.avatar} alt="" className="w-5 h-5 rounded-full object-cover border border-gray-700" />}
+                          <span className={`text-sm font-semibold ${profile.username ? 'text-white' : 'font-mono text-white/70'}`}>
+                            {profile.username || shortAddr(address!)}
+                          </span>
+                          <span className="text-xs text-blue-400/70">(you)</span>
+                        </div>
+                        <p className="text-[10px] text-gray-600 mt-0.5 pl-0">Build your squad to appear on the board</p>
+                      </td>
+                      <td className="py-3 px-2 text-center hidden md:table-cell"><span className="text-xs text-white/20">—</span></td>
+                      <td className="py-3 px-2 text-right"><span className="text-xs text-white/20">—</span></td>
+                      <td className="py-3 pl-2 pr-4 text-right"><span className="font-bold tabular-nums text-sm text-white/30">0</span></td>
+                    </tr>
+                  )}
                   {display.map(entry => (
                     <LeaderboardRow
                       key={entry.address}

@@ -12,12 +12,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adaptFixturePlayers } from '@/lib/stats-adapter';
 import { scoreMatch } from '@/lib/scoring-engine';
+import { CONTRACT_ADDRESS, ENDPOINTS, CHAIN_ID } from '@/lib/network';
 
 const FD_BASE  = 'https://api.football-data.org/v4';
 const AF_BASE  = 'https://v3.football.api-sports.io';
 const FD_KEY   = process.env.FOOTBALL_DATA_API_KEY;
 const AF_KEY   = process.env.API_FOOTBALL_KEY;
-const CRON_SECRET = process.env.CRON_SECRET;
+const CRON_SECRET    = process.env.CRON_SECRET;
+const ADMIN_MNEMONIC = process.env.ADMIN_MNEMONIC;
+
+// Push scored players on-chain using the admin wallet (server-side signing)
+async function pushScoresOnChain(
+  fixtureId: number,
+  players: { playerId: string; breakdown: { total: number } }[],
+  matchScore: { home: number; away: number },
+  homeTeam: string,
+  awayTeam: string,
+) {
+  if (!ADMIN_MNEMONIC || !CONTRACT_ADDRESS) return { status: 'skipped_no_config' };
+  try {
+    const { DirectSecp256k1HdWallet } = await import('@cosmjs/proto-signing');
+    const { SigningCosmWasmClient } = await import('@cosmjs/cosmwasm-stargate');
+
+    const wallet = await DirectSecp256k1HdWallet.fromMnemonic(ADMIN_MNEMONIC, { prefix: 'inj' });
+    const [{ address }] = await wallet.getAccounts();
+    const client = await SigningCosmWasmClient.connectWithSigner(
+      ENDPOINTS.rpc as string,
+      wallet as any,
+      { gasPrice: '500000000inj' as any },
+    );
+
+    // Map player IDs from our scoring engine to the contract's expected format
+    const playerScores = players
+      .filter(p => p.playerId)
+      .map(p => ({ player_id: p.playerId, points: Math.max(0, p.breakdown.total) }));
+
+    // Submit player fantasy scores
+    await client.execute(address, CONTRACT_ADDRESS, {
+      submit_player_scores: { fixture_id: String(fixtureId), player_scores: playerScores },
+    }, 'auto');
+
+    // Submit match result for prediction scoring
+    await client.execute(address, CONTRACT_ADDRESS, {
+      submit_result: {
+        match_id: String(fixtureId),
+        home_team: homeTeam,
+        away_team: awayTeam,
+        home_score: matchScore.home,
+        away_score: matchScore.away,
+      },
+    }, 'auto');
+
+    return { status: 'pushed', playerCount: playerScores.length, adminAddress: address };
+  } catch (err: any) {
+    console.error('[cron] on-chain push failed:', err?.message);
+    return { status: 'push_failed', error: err?.message };
+  }
+}
 
 // Simple in-process set so we don't double-score within one process lifetime.
 // For persistence across deploys, swap this for a KV store (Vercel KV, Upstash, etc.)
@@ -117,7 +168,15 @@ export async function GET(req: NextRequest) {
 
     alreadyScored.add(match.id);
 
-    // Top 5 scorers for the log
+    // Push scores on-chain automatically
+    const onChain = await pushScoresOnChain(
+      afId,
+      scored.players,
+      match.score.fullTime,
+      match.homeTeam.name,
+      match.awayTeam.name,
+    );
+
     const top5 = scored.players.slice(0, 5).map(p => ({
       name: p.playerName,
       pos: p.position,
@@ -131,11 +190,12 @@ export async function GET(req: NextRequest) {
       away: match.awayTeam.name,
       score: match.score.fullTime,
       status: 'scored',
+      onChain,
       top5,
       totalPlayers: scored.players.length,
     });
 
-    console.log(`[cron] Scored ${match.homeTeam.name} vs ${match.awayTeam.name}`, top5);
+    console.log(`[cron] Scored ${match.homeTeam.name} vs ${match.awayTeam.name}`, onChain.status, top5);
   }
 
   return NextResponse.json({ scored: results, checkedAt: new Date().toISOString() });
