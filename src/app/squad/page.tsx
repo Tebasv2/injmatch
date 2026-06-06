@@ -7,6 +7,9 @@ import { PlayerPool } from '@/components/squad/PlayerPool';
 import { FORMATIONS, SQUAD_BUDGET } from '@/lib/players';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { useSquad } from '@/hooks/useSquad';
+import { useNFTBoost } from '@/hooks/useNFTBoost';
+import { useProfile } from '@/hooks/useProfile';
+import { SquadShareCard } from '@/components/squad/SquadShareCard';
 import type { Player, Formation } from '@/types/squad';
 
 interface TransferWindowState {
@@ -73,6 +76,10 @@ export default function SquadPage() {
     saveStatus, lastSaved,
     saveSquad,
   } = useSquad(address);
+
+  const hasBoost = useNFTBoost(address);
+  const { profile } = useProfile(address);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const [selectedSlot, setSelectedSlot] = useState<{ type: 'starter' | 'bench'; index: number } | null>(null);
   const [positionError, setPositionError] = useState<string | null>(null);
@@ -247,6 +254,14 @@ export default function SquadPage() {
           {/* Budget bar */}
           <BudgetBar spent={totalSpent} budget={SQUAD_BUDGET} />
 
+          {/* NFT Boost badge */}
+          {hasBoost && (
+            <div className="flex items-center gap-2 bg-[#111] border border-blue-500/30 rounded-2xl px-4 py-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Boost Active</span>
+            </div>
+          )}
+
           {/* Captain / Vice-Captain picker */}
           {starters.some(Boolean) && (
             <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
@@ -405,8 +420,43 @@ export default function SquadPage() {
                 </motion.button>
               )}
             </AnimatePresence>
+
+            {/* Share / Download button */}
+            {totalSelected >= 11 && (
+              <motion.button
+                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                onClick={() => setShareOpen(v => !v)}
+                className="border border-gray-700 hover:border-blue-500 text-gray-400 hover:text-blue-400 font-black uppercase tracking-widest text-xs px-5 py-2.5 rounded-xl transition-colors"
+              >
+                {shareOpen ? 'Hide Card' : 'Share Squad'}
+              </motion.button>
+            )}
           </div>
+
+          {/* Share card */}
+          <AnimatePresence>
+            {shareOpen && totalSelected >= 11 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="mt-4 flex justify-center"
+              >
+                <SquadShareCard
+                  starters={starters}
+                  formation={formation}
+                  captainId={captainId}
+                  viceCaptainId={viceCaptainId}
+                  profile={profile}
+                  address={address ?? ''}
+                  hasBoost={hasBoost}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+        <div className="hidden">{/* spacer */}</div>
 
         {/* Right — player pool */}
         <div className="flex-1 min-h-[500px]">

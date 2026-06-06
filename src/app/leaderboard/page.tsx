@@ -5,7 +5,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PLAYERS } from '@/lib/players';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import { ChainGrpcWasmApi, toBase64, fromBase64 } from '@injectivelabs/sdk-ts';
+import { ENDPOINTS } from '@/lib/network';
+import { NFT_BOOST_MULTIPLIER } from '@/hooks/useNFTBoost';
 import type { Player } from '@/types/squad';
+
+const NFT_CONTRACT = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS ?? '';
+
+async function hasNFTBoost(address: string): Promise<boolean> {
+  if (!NFT_CONTRACT) return false;
+  try {
+    const wasmApi = new ChainGrpcWasmApi(ENDPOINTS.grpc);
+    const res = await wasmApi.fetchSmartContractState(
+      NFT_CONTRACT,
+      toBase64({ tokens: { owner: address, limit: 1 } }),
+    );
+    const data = fromBase64(res.data as unknown as string) as { ids?: string[] };
+    return Array.isArray(data?.ids) && data.ids.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 interface LeaderboardEntry {
   rank: number;
@@ -13,6 +33,7 @@ interface LeaderboardEntry {
   formation: string;
   totalPoints: number;
   weekPoints: number;
+  boosted: boolean;
   starterIds: string[];
   benchIds: string[];
 }
@@ -85,9 +106,15 @@ function LeaderboardRow({ entry, isYou }: { entry: LeaderboardEntry; isYou?: boo
       >
         <td className="py-3 pl-4 pr-2 w-10"><div className="flex justify-center"><RankBadge rank={entry.rank} /></div></td>
         <td className="py-3 px-2">
-          <div className="font-semibold text-sm text-white font-mono">
+          <div className="font-semibold text-sm text-white font-mono flex items-center gap-2 flex-wrap">
             {shortAddr(entry.address)}
-            {isYou && <span className="ml-2 text-xs font-normal text-emerald-400/70">(you)</span>}
+            {isYou && <span className="text-xs font-normal text-emerald-400/70">(you)</span>}
+            {entry.boosted && (
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.15em] text-blue-400 border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                <span className="w-1 h-1 rounded-full bg-blue-400 animate-pulse" />
+                Boost Active
+              </span>
+            )}
           </div>
         </td>
         <td className="py-3 px-2 text-center hidden md:table-cell">
@@ -148,15 +175,20 @@ export default function LeaderboardPage() {
 
       const mapped: LeaderboardEntry[] = await Promise.all(
         result.map(async (entry: { address: string; total_points: number; rank: number }) => {
-          const squad = await client.queryContractSmart(CONTRACT, { get_squad: { owner: entry.address } }).catch(() => null);
+          const [squad, boosted] = await Promise.all([
+            client.queryContractSmart(CONTRACT, { get_squad: { owner: entry.address } }).catch(() => null),
+            hasNFTBoost(entry.address),
+          ]);
+          const basePoints = entry.total_points ?? 0;
           return {
             rank:        entry.rank,
             address:     entry.address,
             formation:   squad?.formation ?? '—',
-            totalPoints: entry.total_points ?? 0,
+            totalPoints: boosted ? Math.round(basePoints * NFT_BOOST_MULTIPLIER) : basePoints,
             weekPoints:  0,
             starterIds:  squad?.starter_ids ?? [],
             benchIds:    squad?.bench_ids ?? [],
+            boosted,
           };
         })
       );
