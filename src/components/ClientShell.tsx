@@ -68,13 +68,47 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
 }
 
 
-export function ClientShell({ children }: { children: React.ReactNode }) {
-  const [lang, setLang]         = useState<'EN' | 'UA'>('EN');
-  const [menuOpen, setMenu]     = useState(false);
-  const [profileOpen, setProfile] = useState(false);
+function ProfileButton() {
   const ctx = useWalletContextSafe();
   const address = ctx?.address ?? null;
   const { profile, saveProfile } = useProfile(address);
+  const [profileOpen, setProfile] = useState(false);
+
+  if (!address) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setProfile(true)}
+        className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-700 hover:border-blue-500 transition-colors overflow-hidden bg-gray-900"
+        aria-label="Profile"
+      >
+        {profile.avatar ? (
+          <img src={profile.avatar} alt="avatar" className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-[10px] font-black text-gray-400">
+            {profile.username ? profile.username[0].toUpperCase() : '?'}
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {profileOpen && (
+          <ProfileModal
+            profile={profile}
+            address={address}
+            onSave={saveProfile}
+            onClose={() => setProfile(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+export function ClientShell({ children }: { children: React.ReactNode }) {
+  const [lang, setLang]     = useState<'EN' | 'UA'>('EN');
+  const [menuOpen, setMenu] = useState(false);
 
   return (
     <WalletProvider>
@@ -121,21 +155,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Profile button — only when connected */}
-            {address && (
-              <button
-                onClick={() => setProfile(true)}
-                className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-700 hover:border-blue-500 transition-colors overflow-hidden bg-gray-900"
-                aria-label="Profile"
-              >
-                {profile.avatar ? (
-                  <img src={profile.avatar} alt="avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-black text-gray-400">
-                    {profile.username ? profile.username[0].toUpperCase() : '?'}
-                  </span>
-                )}
-              </button>
-            )}
+            <ProfileButton />
 
             {/* Wallet */}
             <WalletButton />
@@ -184,18 +204,6 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
       </motion.div>
 
       <main>{children}</main>
-
-      {/* Profile modal */}
-      <AnimatePresence>
-        {profileOpen && address && (
-          <ProfileModal
-            profile={profile}
-            address={address}
-            onSave={saveProfile}
-            onClose={() => setProfile(false)}
-          />
-        )}
-      </AnimatePresence>
     </WalletProvider>
   );
 }
