@@ -169,36 +169,51 @@ export default function LeaderboardPage() {
     if (!CONTRACT) { setLoading(false); return; }
 
     CosmWasmClient.connect(RPC).then(async client => {
-      // Query the leaderboard from the smart contract
-      const result = await client.queryContractSmart(CONTRACT, { get_fantasy_leaderboard: { limit: 200 } }).catch(() => null);
+      // Fetch all saved squads (everyone who signed up) + points overlay
+      const [squadsResult, pointsResult] = await Promise.all([
+        client.queryContractSmart(CONTRACT, { list_squads: { limit: 200 } }).catch(() => null),
+        client.queryContractSmart(CONTRACT, { get_fantasy_leaderboard: { limit: 200 } }).catch(() => null),
+      ]);
 
-      if (!result || !Array.isArray(result) || result.length === 0) {
-        // No scores submitted yet — leaderboard is empty
-        // The contract doesn't have a list_squads endpoint, so we show an empty state
+      const squads: { owner: string; formation: string; starter_ids: string[]; bench_ids: string[] }[] =
+        Array.isArray(squadsResult) ? squadsResult :
+        Array.isArray(squadsResult?.squads) ? squadsResult.squads : [];
+
+      if (squads.length === 0) {
         setEntries([]);
         setLoading(false);
         return;
       }
 
+      // Build points lookup from leaderboard data
+      const pointsMap: Record<string, number> = {};
+      if (Array.isArray(pointsResult)) {
+        for (const e of pointsResult) {
+          if (e.address) pointsMap[e.address] = e.total_points ?? 0;
+        }
+      }
+
       const mapped: LeaderboardEntry[] = await Promise.all(
-        result.map(async (entry: { address: string; total_points: number; rank: number }) => {
-          const [squad, boosted] = await Promise.all([
-            client.queryContractSmart(CONTRACT, { get_squad: { owner: entry.address } }).catch(() => null),
-            hasNFTBoost(entry.address),
-          ]);
-          const basePoints = entry.total_points ?? 0;
+        squads.map(async (squad, idx) => {
+          const boosted = await hasNFTBoost(squad.owner);
+          const basePoints = pointsMap[squad.owner] ?? 0;
           return {
-            rank:        entry.rank,
-            address:     entry.address,
-            formation:   squad?.formation ?? '—',
+            rank:        idx + 1,
+            address:     squad.owner,
+            formation:   squad.formation ?? '—',
             totalPoints: boosted ? Math.round(basePoints * NFT_BOOST_MULTIPLIER) : basePoints,
             weekPoints:  0,
-            starterIds:  squad?.starter_ids ?? [],
-            benchIds:    squad?.bench_ids ?? [],
+            starterIds:  squad.starter_ids ?? [],
+            benchIds:    squad.bench_ids ?? [],
             boosted,
           };
         })
       );
+
+      // Sort by points desc, re-rank
+      mapped.sort((a, b) => b.totalPoints - a.totalPoints);
+      mapped.forEach((e, i) => { e.rank = i + 1; });
+
       setEntries(mapped);
     }).catch(e => {
       setError(e.message);
