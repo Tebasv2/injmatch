@@ -8,6 +8,7 @@ import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import { ChainGrpcWasmApi, toBase64, fromBase64 } from '@injectivelabs/sdk-ts';
 import { ENDPOINTS } from '@/lib/network';
 import { NFT_BOOST_MULTIPLIER } from '@/hooks/useNFTBoost';
+import { useProfile } from '@/hooks/useProfile';
 import type { Player } from '@/types/squad';
 
 const NFT_CONTRACT = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS ?? '';
@@ -87,7 +88,7 @@ function TopCard({ entry, order }: { entry: LeaderboardEntry; order: number }) {
   );
 }
 
-function LeaderboardRow({ entry, isYou }: { entry: LeaderboardEntry; isYou?: boolean }) {
+function LeaderboardRow({ entry, isYou, username, avatar }: { entry: LeaderboardEntry; isYou?: boolean; username?: string; avatar?: string }) {
   const [expanded, setExpanded] = useState(false);
   const players = topPlayers(entry.starterIds);
 
@@ -106,8 +107,13 @@ function LeaderboardRow({ entry, isYou }: { entry: LeaderboardEntry; isYou?: boo
       >
         <td className="py-3 pl-4 pr-2 w-10"><div className="flex justify-center"><RankBadge rank={entry.rank} /></div></td>
         <td className="py-3 px-2">
-          <div className="font-semibold text-sm text-white font-mono flex items-center gap-2 flex-wrap">
-            {shortAddr(entry.address)}
+          <div className="font-semibold text-sm text-white flex items-center gap-2 flex-wrap">
+            {avatar && (
+              <img src={avatar} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-gray-700" />
+            )}
+            <span className={username ? 'text-white' : 'font-mono text-white/70'}>
+              {username || shortAddr(entry.address)}
+            </span>
             {isYou && <span className="text-xs font-normal text-emerald-400/70">(you)</span>}
             {entry.boosted && (
               <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.15em] text-blue-400 border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 rounded">
@@ -152,6 +158,7 @@ function LeaderboardRow({ entry, isYou }: { entry: LeaderboardEntry; isYou?: boo
 
 export default function LeaderboardPage() {
   const { address } = useWalletContext();
+  const { profile } = useProfile(address);
   const [entries, setEntries]   = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
@@ -291,7 +298,13 @@ export default function LeaderboardPage() {
                 </thead>
                 <tbody>
                   {display.map(entry => (
-                    <LeaderboardRow key={entry.address} entry={entry} isYou={entry.address === address} />
+                    <LeaderboardRow
+                      key={entry.address}
+                      entry={entry}
+                      isYou={entry.address === address}
+                      username={entry.address === address ? profile.username || undefined : undefined}
+                      avatar={entry.address === address ? profile.avatar || undefined : undefined}
+                    />
                   ))}
                 </tbody>
               </table>

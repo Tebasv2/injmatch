@@ -76,6 +76,32 @@ function ProfileButton() {
 
   if (!address) return null;
 
+  async function handleSave(p: import('@/hooks/useProfile').UserProfile) {
+    saveProfile(p);
+    // Register on leaderboard by saving a default squad if not yet registered
+    try {
+      const registered = localStorage.getItem(`injmatch_registered_${address}`);
+      if (!registered) {
+        const { CHAIN_ID, ENDPOINTS, CONTRACT_ADDRESS } = await import('@/lib/network');
+        const keplr = (window as any).keplr;
+        if (keplr && CONTRACT_ADDRESS) {
+          const { SigningCosmWasmClient } = await import('@cosmjs/cosmwasm-stargate');
+          const offlineSigner = keplr.getOfflineSignerOnlyAmino(CHAIN_ID);
+          const client = await SigningCosmWasmClient.connectWithSigner(
+            ENDPOINTS.rpc as string, offlineSigner, { gasPrice: '500000000inj' as any },
+          );
+          await client.execute(address!, CONTRACT_ADDRESS, {
+            save_squad: { formation: '4-3-3', starter_ids: [], bench_ids: [], captain_id: null, vice_captain_id: null },
+          }, 'auto');
+          localStorage.setItem(`injmatch_registered_${address}`, '1');
+        }
+      }
+    } catch {
+      // silent — squad save on profile create is best-effort
+    }
+    setProfile(false);
+  }
+
   return (
     <>
       <button
@@ -97,7 +123,7 @@ function ProfileButton() {
           <ProfileModal
             profile={profile}
             address={address}
-            onSave={saveProfile}
+            onSave={handleSave}
             onClose={() => setProfile(false)}
           />
         )}
@@ -107,7 +133,6 @@ function ProfileButton() {
 }
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
-  const [lang, setLang]     = useState<'EN' | 'UA'>('EN');
   const [menuOpen, setMenu] = useState(false);
 
   return (
@@ -139,21 +164,6 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
 
           {/* Right controls */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Language toggle — hidden on xs */}
-            <div className="hidden sm:flex items-center rounded-lg overflow-hidden border border-gray-700">
-              {(['EN', 'UA'] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`px-2.5 py-1 text-xs font-bold uppercase tracking-widest transition-colors ${
-                    lang === l ? 'bg-blue-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-
             {/* Profile button — only when connected */}
             <ProfileButton />
 
@@ -184,20 +194,6 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
               className="lg:hidden mt-2 rounded-2xl border border-gray-700/60 bg-[rgba(10,10,10,0.96)] backdrop-blur-xl px-2 py-3 flex flex-col"
             >
               <NavLinks onClose={() => setMenu(false)} />
-              {/* Language toggle in drawer */}
-              <div className="sm:hidden flex items-center rounded-lg overflow-hidden border border-gray-700 mx-3 mt-3 self-start">
-                {(['EN', 'UA'] as const).map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLang(l)}
-                    className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
-                      lang === l ? 'bg-blue-500 text-black' : 'text-gray-400 hover:text-white bg-transparent'
-                    }`}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
             </motion.div>
           )}
         </AnimatePresence>

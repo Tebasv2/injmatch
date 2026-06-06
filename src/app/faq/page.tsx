@@ -35,6 +35,10 @@ const CATEGORIES: FAQCategory[] = [
         q: 'Do I need any prior blockchain experience?',
         a: 'No. If you can install a browser wallet and connect it, you can play. Everything else — team selection, scoring, leaderboard — works like a normal web app.',
       },
+      {
+        q: 'How do I set up my profile?',
+        a: 'Once your wallet is connected, click the circle icon next to your wallet address in the top navigation bar. A profile panel will open where you can set a username (up to 20 characters) and choose or upload a profile photo. Hit Save Profile — your details are stored on your device and your name will appear on the leaderboard immediately.',
+      },
     ],
   },
   {
