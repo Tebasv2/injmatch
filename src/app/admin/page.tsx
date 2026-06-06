@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { useContract } from '@/hooks/useContract';
+import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import type { ScoredPlayer } from '@/types/scoring';
+
+const CONTRACT = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? '';
+const RPC       = 'https://testnet.sentry.tm.injective.network:443';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS ?? '';
 
@@ -157,6 +161,7 @@ function MatchScorer({ adminAddress }: { adminAddress: string }) {
       const res  = await fetch('/api/cron/check-matches');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Cron failed');
+      localStorage.setItem('injmatch_last_cron', new Date().toISOString());
       alert(JSON.stringify(data, null, 2));
     } catch (e: any) {
       setError(e.message);
@@ -364,11 +369,51 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
+function useAdminStats() {
+  const [managers, setManagers]           = useState<string>('…');
+  const [matchesScored, setMatchesScored] = useState<string>('…');
+  const [lastCron, setLastCron]           = useState<string>('—');
+
+  useEffect(() => {
+    // Last cron time from localStorage
+    const stored = localStorage.getItem('injmatch_last_cron');
+    if (stored) {
+      const d = new Date(stored);
+      setLastCron(d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) +
+        ' ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+    }
+
+    if (!CONTRACT) { setManagers('—'); setMatchesScored('—'); return; }
+
+    CosmWasmClient.connect(RPC).then(async client => {
+      // Manager count — all squads saved
+      const squadsResult = await client.queryContractSmart(CONTRACT, { list_squads: { limit: 500 } }).catch(() => null);
+      const squads: any[] =
+        Array.isArray(squadsResult) ? squadsResult :
+        Array.isArray(squadsResult?.squads) ? squadsResult.squads : [];
+      setManagers(String(squads.length));
+
+      // Matches scored — count distinct fixture_ids that have player scores
+      const lbResult = await client.queryContractSmart(CONTRACT, { get_fantasy_leaderboard: { limit: 500 } }).catch(() => null);
+      const lb: any[] = Array.isArray(lbResult) ? lbResult : [];
+      const hasScores = lb.some(e => (e.total_points ?? 0) > 0);
+      // Approximate: if anyone has points, at least one match scored
+      setMatchesScored(hasScores ? '1+' : '0');
+    }).catch(() => {
+      setManagers('—');
+      setMatchesScored('—');
+    });
+  }, []);
+
+  return { managers, matchesScored, lastCron };
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const { address } = useWalletContext();
   const isAdmin = ADMIN_ADDRESS ? address === ADMIN_ADDRESS : false;
+  const { managers, matchesScored, lastCron } = useAdminStats();
 
   if (!isAdmin) return <AccessDenied address={address} />;
 
@@ -389,10 +434,10 @@ export default function AdminPage() {
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         {/* Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="Matches Scored" value="0"    sub="WC2026 so far" />
-          <StatCard label="Managers"        value="0"    sub="Squads saved" />
-          <StatCard label="API Calls Left"  value="100"  sub="Today (free tier)" />
-          <StatCard label="Last Cron"       value="—"    sub="Never run" />
+          <StatCard label="Matches Scored" value={matchesScored} sub="WC2026 so far" />
+          <StatCard label="Managers"        value={managers}      sub="Squads saved" />
+          <StatCard label="Last Cron"       value={lastCron}      sub={lastCron === '—' ? 'Never run' : 'Last triggered'} />
+          <StatCard label="Network"         value="Testnet"       sub="injective-888" />
         </div>
 
         {/* Transfer window */}
